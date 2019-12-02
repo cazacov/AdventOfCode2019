@@ -20,6 +20,7 @@ void IntcodeComputer::load_program(const char *file_name) {
     std::string line;
     while(std::getline(data,line))
     {
+        line.erase(line.find_last_not_of("0123456789,") + 1);
         std::stringstream lineStream(line);
         std::string opcode ;
         while(std::getline(lineStream, opcode ,','))
