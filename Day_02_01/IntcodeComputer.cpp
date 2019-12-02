@@ -4,6 +4,8 @@
 
 #include <fstream>
 #include <sstream>
+#include <iostream>
+#include <iomanip>
 #include "IntcodeComputer.h"
 
 #define OPCODE_ADD 1
@@ -30,25 +32,56 @@ void IntcodeComputer::load_program(const char *file_name) {
     }
 }
 
-bool IntcodeComputer::execute() {
+bool IntcodeComputer::execute(bool trace) {
 
     int op1_addr, op2_addr, op3_addr;
 
     switch (ram[ip]) {
         case OPCODE_HALT:
+            if (trace) {
+                std::cout << "[" << std::setfill('0') << std::setw(3) << ip << "]\tHALT" << std::endl;
+            }
             return false;
         case OPCODE_ADD:
             op1_addr = ram[ip+1];
             op2_addr = ram[ip+2];
             op3_addr = ram[ip+3];
+            if (trace) {
+                std::cout << "[" << std::setfill('0') << std::setw(4) << ip << "]\tADD ["
+                        << std::setfill('0') << std::setw(3) << op1_addr << "] ["
+                        << std::setfill('0') << std::setw(3) << op2_addr << "] => ["
+                        << std::setfill('0') << std::setw(3) << op3_addr << "]";
+                std::cout << "\t"
+                          << std::setfill('0') << std::setw(3) << ram[op1_addr] << " + "
+                          << std::setfill('0') << std::setw(3) << ram[op2_addr] << " = ";
+            }
+
             do_add(op1_addr, op2_addr, op3_addr);
+
+            if (trace) {
+                std::cout << std::setfill('0') << std::setw(3) << ram[op3_addr] << std::endl;
+            }
             ip+=4;
             return true;
         case OPCODE_MUL:
             op1_addr = ram[ip+1];
             op2_addr = ram[ip+2];
             op3_addr = ram[ip+3];
+            if (trace) {
+                std::cout << "[" << std::setfill('0') << std::setw(4) << ip << "]\tMUL ["
+                          << std::setfill('0') << std::setw(3) << op1_addr << "] ["
+                          << std::setfill('0') << std::setw(3) << op2_addr << "] => ["
+                          << std::setfill('0') << std::setw(3) << op3_addr << "]";
+                std::cout << "\t"
+                          << std::setfill('0') << std::setw(3) << ram[op1_addr] << " * "
+                          << std::setfill('0') << std::setw(3) << ram[op2_addr] << " = ";
+            }
+
             do_mul(op1_addr, op2_addr, op3_addr);
+
+            if (trace) {
+                std::cout << std::setfill('0') << std::setw(3) << ram[op3_addr] << std::endl;
+            }
             ip+=4;
             return true;
         default:

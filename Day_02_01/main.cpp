@@ -9,7 +9,7 @@ int main() {
     ship_computer.ram[1] = 12;
     ship_computer.ram[2] = 2;
 
-    while (ship_computer.execute()) {
+    while (ship_computer.execute(true)) {
         ;
     }
 

@@ -13,7 +13,7 @@ private:
 public:
     std::vector<int> ram;
     void load_program(const char* file_name);
-    bool execute();
+    bool execute(bool trace = false);
     void do_add(int op1_addr, int op2_addr, int result_addr);
     void do_mul(int op1_addr, int op2_addr, int result_addr);
 };
