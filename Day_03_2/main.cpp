@@ -24,7 +24,7 @@ struct Node {
 // Required by unordered_map
 template<> struct std::hash<Node> {
     std::size_t operator() (const Node &node) const {
-        return hash<int>()(node.x) ^ hash<int>()(node.y);
+        return (hash<int>()(node.x) << 9) ^ hash<int>()(node.y);
     }
 };
 
