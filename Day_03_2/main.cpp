@@ -17,7 +17,6 @@ struct Wire {
 struct Node {
     int x;
     int y;
-
     bool operator==(const Node &other) const{
         return x == other.x && y == other.y;
     }
@@ -36,13 +35,12 @@ std::vector<std::vector<Wire>> load_circuit(const char *file_name);
 int main() {
     auto circuit = load_circuit("wires.txt");
 
-    std::vector<std::unordered_map<Node,int>> maps;
+    std::unordered_map<Node,unsigned long> nodes;
 
-    for (auto &connection : circuit) {
-        std::unordered_map<Node,int> nodes;
+    for (int con = 0; con < circuit.size(); con++) {
         Node node {0,0};
-        unsigned int distance = 0;
-        for (const auto &wire: connection) {
+        unsigned long distance = 0;
+        for (const auto &wire: circuit[con]) {
             for (int i = 0; i < wire.length; i++) {
                 switch (wire.direction) {
                     case 'U':
@@ -60,35 +58,41 @@ int main() {
                 }
                 distance++;
                 if (nodes.count(node)) {
-                    if (distance >= nodes[node]) {
-                        distance = nodes[node];
+                    unsigned long old_value = nodes[node];
+                    unsigned long existing_distance = (old_value >> (con * 32)) & 0xFFFFFFFFL;
+                    if (existing_distance > 0 && existing_distance <= distance) {
+                        distance = existing_distance;
+                    }
+                    else {
+                        if (con == 0) {
+                            nodes[node] = (old_value & 0xFFFFFFFF00000000L) | distance;
+                        } else {
+                            nodes[node] = (distance << 32) | (old_value & 0xFFFFFFFFL);
+                        }
                     }
                 }
-                nodes[node] = distance;
+                else {
+                    nodes[node] = distance << (con * 32);
+                }
             }
         }
-        maps.push_back(nodes);
     }
 
     // find intersections
     int min_delay = INT32_MAX;
 
-
-    for (const auto &node: maps[0]) {
+    for (const auto &node: nodes) {
         if (node.first.x == 0 && node.first.y ==0) {
             continue;
         }
-        for (const auto &node2: maps[1]) {
-            if (node2.first.x == 0 && node2.first.y ==0) {
-                continue;
-            }
-
-            if (node.first == node2.first) {
-                auto signal_delay = node.second + node2.second;
-                if (signal_delay < min_delay) {
-                    min_delay = signal_delay;
-                }
-            }
+        unsigned long dist = node.second;
+        unsigned long d1 = dist & 0xFFFFFFFFL;
+        unsigned long d2 = dist >> 32;
+        if (!d1 || !d2) {
+            continue;
+        }
+        if (d1+d2 < min_delay) {
+            min_delay = d1+d2;
         }
     }
 
