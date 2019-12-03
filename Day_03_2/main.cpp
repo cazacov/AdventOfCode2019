@@ -35,12 +35,66 @@ std::vector<std::vector<Wire>> load_circuit(const char *file_name);
 int main() {
     auto circuit = load_circuit("wires.txt");
 
-    std::unordered_map<Node,unsigned long> nodes;
 
-    for (int con = 0; con < circuit.size(); con++) {
+    // Find all intersections
+    std::unordered_map<Node,unsigned int> nodes;
+    for (int connection = 0; connection < circuit.size(); connection++)
+    {
+        unsigned int mask = 1u << connection;
         Node node {0,0};
-        unsigned long distance = 0;
-        for (const auto &wire: circuit[con]) {
+        for (const auto &wire: circuit[connection]) {
+            for (int i = 0; i < wire.length; i++) {
+                switch (wire.direction) {
+                    case 'U':
+                        node.y++;
+                        break;
+                    case 'D':
+                        node.y--;
+                        break;
+                    case 'R':
+                        node.x++;
+                        break;
+                    case 'L':
+                        node.x--;
+                        break;
+                }
+                if (nodes.count(node)) {
+                    nodes[node] |= mask;
+                }
+                else {
+                    nodes[node] = mask;
+                }
+            }
+        }
+    }
+
+    std::unordered_map<Node, std::vector<int>> intersections;
+    unsigned int intersection_mask = 0;
+    for (int i = 0; i < circuit.size(); i++) {
+        intersection_mask |= (1u << i);
+    }
+
+    for (auto node : nodes) {
+        if (node.second != intersection_mask) { // No or self-intersection
+            continue;
+        }
+        if (node.first.x == 0 && node.first.y == 0) { // Exclude the central point
+            continue;
+        }
+
+        if (!intersections.count(node.first)){
+            intersections[node.first] = std::vector<int>(2,0);
+        }
+    }
+
+
+
+    // Find the shortest signal paths to every intersection
+    for (int connection = 0; connection < circuit.size(); connection++)
+    {
+        Node node {0,0};
+        int distance = 0;
+        for (const auto &wire: circuit[connection]) {
             for (int i = 0; i < wire.length; i++) {
                 switch (wire.direction) {
                     case 'U':
@@ -57,22 +111,11 @@ int main() {
                         break;
                 }
                 distance++;
-                if (nodes.count(node)) {
-                    unsigned long old_value = nodes[node];
-                    unsigned long existing_distance = (old_value >> (con * 32)) & 0xFFFFFFFFL;
-                    if (existing_distance > 0 && existing_distance <= distance) {
-                        distance = existing_distance;
+                if (intersections.count(node)) {
+                    std::vector<int> int_info = intersections[node];
+                    if (int_info[connection] == 0 || int_info[connection] > distance) {
+                        intersections[node][connection] = distance;
                     }
-                    else {
-                        if (con == 0) {
-                            nodes[node] = (old_value & 0xFFFFFFFF00000000L) | distance;
-                        } else {
-                            nodes[node] = (distance << 32) | (old_value & 0xFFFFFFFFL);
-                        }
-                    }
-                }
-                else {
-                    nodes[node] = distance << (con * 32);
                 }
             }
         }
@@ -81,18 +124,14 @@ int main() {
     // find intersections
     int min_delay = INT32_MAX;
 
-    for (const auto &node: nodes) {
+    for (const auto &node: intersections) {
         if (node.first.x == 0 && node.first.y ==0) {
             continue;
         }
-        unsigned long dist = node.second;
-        unsigned long d1 = dist & 0xFFFFFFFFL;
-        unsigned long d2 = dist >> 32;
-        if (!d1 || !d2) {
-            continue;
-        }
-        if (d1+d2 < min_delay) {
-            min_delay = d1+d2;
+        unsigned long d0 = node.second[0];
+        unsigned long d1 = node.second[1];
+        if (d0+d1 < min_delay) {
+            min_delay = d0+d1;
         }
     }
 
