@@ -1,40 +1,16 @@
 #include <iostream>
 
-int calculate(int param1, int param2);
-
 int main() {
+
+    /* By "disassembling" the opcodes on a sheet of paper it can
+     * be shown that the Intcode program calculates the expression
+     * 288000 * NOUN + 394702 + VERB
+     */
+
     const int TARGET =  19690720;
-    for (auto verb = 0; verb < 100; verb++) {
-        for (auto noun = 0; noun < 100; noun++) {
-            auto result = calculate(noun, verb);
-            if (result == TARGET) {
-                std::cout << 100* noun + verb << std::endl;
-                exit(1);
-            }
-            if (result > TARGET) {  // function is monotonically increasing
-                break;
-            }
-        }
-    }
-    return 0;
-}
 
-// "Disassembled" on a sheet of paper by carefully reading the program opcodes
-int calculate(int param1, int param2) {
+    auto noun = (TARGET - 394702) / 288000;
+    auto verb = (TARGET - 394702) % 288000;
 
-    const int VAR5 = 1;
-    const int VAR6 = 2;
-    const int VAR9 = 3;
-    const int VAR10 = 4;
-    const int VAR13 = 5;
-
-    return ((((((((VAR13 * param1 + VAR6) * VAR6
-            + VAR5 + VAR10) * VAR6
-            + VAR13 + VAR9) * VAR10
-            + VAR5 + VAR10) * VAR6 * VAR6
-            + VAR5) * VAR9
-            + VAR6 + VAR6) * VAR9 * VAR13
-            + VAR10 + VAR13)*VAR13
-            + VAR10)*VAR10
-            + VAR9 + param2 + VAR9;
+    std::cout << 100 * noun + verb << std::endl;
 }
