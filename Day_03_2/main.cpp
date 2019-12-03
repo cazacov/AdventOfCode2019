@@ -4,6 +4,8 @@
 #include <iomanip>
 #include <iostream>
 #include <unordered_map>
+#include <algorithm>
+#include <numeric>
 
 struct Wire {
     char direction;
@@ -21,7 +23,9 @@ struct Node {
         return x == other.x && y == other.y;
     }
 };
+const Node CENTER_POINT = Node {0,0};
 
+// Required by unordered_map
 template<> struct std::hash<Node> {
     std::size_t operator() (const Node &node) const {
         return hash<int>()(node.x) + hash<int>()(node.y);
@@ -35,66 +39,12 @@ std::vector<std::vector<Wire>> load_circuit(const char *file_name);
 int main() {
     auto circuit = load_circuit("wires.txt");
 
+    std::unordered_map<Node, std::vector<int>> nodes;
 
-    // Find all intersections
-    std::unordered_map<Node,unsigned int> nodes;
-    for (int connection = 0; connection < circuit.size(); connection++)
-    {
-        unsigned int mask = 1u << connection;
-        Node node {0,0};
-        for (const auto &wire: circuit[connection]) {
-            for (int i = 0; i < wire.length; i++) {
-                switch (wire.direction) {
-                    case 'U':
-                        node.y++;
-                        break;
-                    case 'D':
-                        node.y--;
-                        break;
-                    case 'R':
-                        node.x++;
-                        break;
-                    case 'L':
-                        node.x--;
-                        break;
-                }
-                if (nodes.count(node)) {
-                    nodes[node] |= mask;
-                }
-                else {
-                    nodes[node] = mask;
-                }
-            }
-        }
-    }
-
-    std::unordered_map<Node, std::vector<int>> intersections;
-    unsigned int intersection_mask = 0;
-    for (int i = 0; i < circuit.size(); i++) {
-        intersection_mask |= (1u << i);
-    }
-
-    for (auto node : nodes) {
-        if (node.second != intersection_mask) { // No or self-intersection
-            continue;
-        }
-        if (node.first.x == 0 && node.first.y == 0) { // Exclude the central point
-            continue;
-        }
-
-        if (!intersections.count(node.first)){
-            intersections[node.first] = std::vector<int>(2,0);
-        }
-    }
-
-
-
-    // Find the shortest signal paths to every intersection
-    for (int connection = 0; connection < circuit.size(); connection++)
-    {
-        Node node {0,0};
+    for (int con = 0; con < circuit.size(); con++) {
+        Node node {CENTER_POINT};
         int distance = 0;
-        for (const auto &wire: circuit[connection]) {
+        for (const auto &wire: circuit[con]) {
             for (int i = 0; i < wire.length; i++) {
                 switch (wire.direction) {
                     case 'U':
@@ -111,27 +61,38 @@ int main() {
                         break;
                 }
                 distance++;
-                if (intersections.count(node)) {
-                    std::vector<int> int_info = intersections[node];
-                    if (int_info[connection] == 0 || int_info[connection] > distance) {
-                        intersections[node][connection] = distance;
+                if (nodes.count(node)) {
+                    std::vector<int> distances = nodes[node];
+                    if (distances[con] == 0) {
+                        nodes[node][con] = distance;
                     }
+                }
+                else {
+                    std::vector<int> distances(circuit.size(),0);
+                    distances[con] = distance;
+                    nodes[node] = distances;
                 }
             }
         }
     }
 
-    // find intersections
+    // find minimal signal delay
     int min_delay = INT32_MAX;
-
-    for (const auto &node: intersections) {
-        if (node.first.x == 0 && node.first.y ==0) {
+    for (const auto &node: nodes) {
+        if (node.first == CENTER_POINT) {
             continue;
         }
-        unsigned long d0 = node.second[0];
-        unsigned long d1 = node.second[1];
-        if (d0+d1 < min_delay) {
-            min_delay = d0+d1;
+
+        std::vector<int> distances = node.second;
+        
+        // Are all wires are connected to the node?
+        if ( !std::all_of(distances.begin(), distances.end(), [](int d) { return d > 0;})) {
+            continue;
+        }
+
+        int total_delay = std::accumulate(distances.begin(), distances.end(), 0, std::plus<>());
+        if (total_delay < min_delay) {
+            min_delay = total_delay;
         }
     }
 
