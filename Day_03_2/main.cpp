@@ -1,11 +1,8 @@
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <iomanip>
 #include <iostream>
 #include <unordered_map>
-#include <algorithm>
-#include <numeric>
 #include <chrono>
 
 struct Wire {
@@ -24,15 +21,14 @@ struct Node {
         return x == other.x && y == other.y;
     }
 };
-const Node CENTER_POINT = Node {0,0};
-
 // Required by unordered_map
 template<> struct std::hash<Node> {
     std::size_t operator() (const Node &node) const {
-        return hash<int>()(node.x) + hash<int>()(node.y);
+        return hash<int>()(node.x) ^ hash<int>()(node.y);
     }
 };
 
+const Node CENTER_POINT = Node {0,0};
 
 std::vector<std::vector<Wire>> load_circuit(const char *file_name);
 
@@ -43,7 +39,6 @@ int main() {
     auto circuit = load_circuit("wires.txt");
 
     std::unordered_map<Node, int> nodes;
-
 
     // trace the first wire
     Node node {CENTER_POINT};
