@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <numeric>
+#include <chrono>
 
 struct Wire {
     char direction;
@@ -37,66 +38,82 @@ std::vector<std::vector<Wire>> load_circuit(const char *file_name);
 
 
 int main() {
+
+    auto t1 = std::chrono::high_resolution_clock::now();
     auto circuit = load_circuit("wires.txt");
 
-    std::unordered_map<Node, std::vector<int>> nodes;
+    std::unordered_map<Node, int> nodes;
 
-    for (int con = 0; con < circuit.size(); con++) {
-        Node node {CENTER_POINT};
-        int distance = 0;
-        for (const auto &wire: circuit[con]) {
-            for (int i = 0; i < wire.length; i++) {
-                switch (wire.direction) {
-                    case 'U':
-                        node.y++;
-                        break;
-                    case 'D':
-                        node.y--;
-                        break;
-                    case 'R':
-                        node.x++;
-                        break;
-                    case 'L':
-                        node.x--;
-                        break;
+
+    // trace the first wire
+    Node node {CENTER_POINT};
+    int distance = 0;
+    for (const auto &wire: circuit[0]) {
+        for (int i = 0; i < wire.length; i++) {
+            switch (wire.direction) {
+                case 'U':
+                    node.y++;
+                    break;
+                case 'D':
+                    node.y--;
+                    break;
+                case 'R':
+                    node.x++;
+                    break;
+                case 'L':
+                    node.x--;
+                    break;
+            }
+            distance++;
+            auto it = nodes.find(node);
+            if (it != nodes.end()) {
+                if ((*it).second == 0) {
+                    (*it).second = distance;
                 }
-                distance++;
-                if (nodes.count(node)) {
-                    std::vector<int> distances = nodes[node];
-                    if (distances[con] == 0) {
-                        nodes[node][con] = distance;
-                    }
-                }
-                else {
-                    std::vector<int> distances(circuit.size(),0);
-                    distances[con] = distance;
-                    nodes[node] = distances;
-                }
+            }
+            else {
+                nodes[node] = distance;
             }
         }
     }
 
-    // find minimal signal delay
-    int min_delay = INT32_MAX;
-    for (const auto &node: nodes) {
-        if (node.first == CENTER_POINT) {
-            continue;
-        }
 
-        std::vector<int> distances = node.second;
-        
-        // Are all wires are connected to the node?
-        if ( !std::all_of(distances.begin(), distances.end(), [](int d) { return d > 0;})) {
-            continue;
-        }
+    // find the minimal signal delay
+    int min_distance = INT32_MAX;
 
-        int total_delay = std::accumulate(distances.begin(), distances.end(), 0, std::plus<>());
-        if (total_delay < min_delay) {
-            min_delay = total_delay;
+    node = {CENTER_POINT};
+    distance = 0;
+    for (const auto &wire: circuit[1]) {
+        for (int i = 0; i < wire.length; i++) {
+            switch (wire.direction) {
+                case 'U':
+                    node.y++;
+                    break;
+                case 'D':
+                    node.y--;
+                    break;
+                case 'R':
+                    node.x++;
+                    break;
+                case 'L':
+                    node.x--;
+                    break;
+            }
+            distance++;
+            auto it = nodes.find(node);
+            if (it != nodes.end()) {
+                if ((*it).second + distance < min_distance) {
+                    min_distance = (*it).second + distance;
+                }
+            }
         }
     }
+    std::cout << min_distance << std::endl;
+    auto t2 = std::chrono::high_resolution_clock::now();
 
-    std::cout << min_delay << std::endl;
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+
+    std::cout << "Duration (milliseconds): " << duration / 1000;
     return 0;
 }
 
