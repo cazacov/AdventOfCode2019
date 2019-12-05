@@ -6,13 +6,12 @@ int main() {
     IntcodeComputer ship_computer;
     ship_computer.load_program("program.txt");
 
-    ship_computer.ram[1] = 12;
-    ship_computer.ram[2] = 2;
+    ship_computer.set_input({1});
 
-    while (ship_computer.execute(true)) {
+    while (ship_computer.step(true)) {
         ;
     }
 
-    std::cout << ship_computer.ram[0] << std::endl;
+    std::cout << ship_computer.get_last_output() << std::endl;
     return 0;
 }

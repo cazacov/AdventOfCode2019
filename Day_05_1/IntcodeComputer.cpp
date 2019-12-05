@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by Victor on 02.12.2019.
 //
@@ -32,7 +34,7 @@ void IntcodeComputer::load_program(const char *file_name) {
     }
 }
 
-bool IntcodeComputer::execute(bool trace) {
+bool IntcodeComputer::step(bool trace) {
 
     int op1_addr, op2_addr, op3_addr;
 
@@ -95,4 +97,8 @@ void IntcodeComputer::do_add(int op1_addr, int op2_addr, int result_addr) {
 
 void IntcodeComputer::do_mul(int op1_addr, int op2_addr, int result_addr) {
     ram[result_addr] = ram[op1_addr] * ram[op2_addr];
+}
+
+void IntcodeComputer::set_input(std::vector<int> input) {
+    input_buf = std::move(input);
 }
