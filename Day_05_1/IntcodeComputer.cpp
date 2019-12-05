@@ -9,10 +9,8 @@
 #include <iostream>
 #include <iomanip>
 #include "IntcodeComputer.h"
+#include "Command.h"
 
-#define OPCODE_ADD 1
-#define OPCODE_MUL 2
-#define OPCODE_HALT 99
 
 void IntcodeComputer::load_program(const char *file_name) {
 
@@ -24,7 +22,10 @@ void IntcodeComputer::load_program(const char *file_name) {
     std::string line;
     while(std::getline(data,line))
     {
-        line.erase(line.find_last_not_of("0123456789,") + 1);
+        int comment_idx = line.find_last_not_of("0123456789,-");
+        if (comment_idx > 0) {
+            line.erase(comment_idx + 1);
+        }
         std::stringstream lineStream(line);
         std::string opcode ;
         while(std::getline(lineStream, opcode ,','))
@@ -36,69 +37,124 @@ void IntcodeComputer::load_program(const char *file_name) {
 
 bool IntcodeComputer::step(bool trace) {
 
-    int op1_addr, op2_addr, op3_addr;
+    if (trace) {
+        std::cout << std::setfill('0') << std::setw(4) << ip << "\t";
+    }
 
-    switch (ram[ip]) {
+    Command next_command = load_next_command();
+
+    int result = 0;
+    std::string cmd;
+    if (trace) {
+        for (int i = 0; i < next_command.param_count; i++) {
+            if (next_command.is_position_mode[i]) {
+                std::cout << "[" << std::setw(8) << next_command.parameter_values[i] << "]\t";
+            } else {
+                std::cout << " " << std::setw(8) << next_command.parameter_values[i] << " \t";
+            }
+        }
+    }
+
+    switch(next_command.opcode) {
         case OPCODE_HALT:
             if (trace) {
-                std::cout << "[" << std::setfill('0') << std::setw(3) << ip << "]\tHALT" << std::endl;
+                std::cout << "HALT" << std::endl;
             }
             return false;
         case OPCODE_ADD:
-            op1_addr = ram[ip+1];
-            op2_addr = ram[ip+2];
-            op3_addr = ram[ip+3];
-            if (trace) {
-                std::cout << "[" << std::setfill('0') << std::setw(4) << ip << "]\tADD ["
-                        << std::setfill('0') << std::setw(3) << op1_addr << "] ["
-                        << std::setfill('0') << std::setw(3) << op2_addr << "] => ["
-                        << std::setfill('0') << std::setw(3) << op3_addr << "]";
-                std::cout << "\t"
-                          << std::setfill('0') << std::setw(3) << ram[op1_addr] << " + "
-                          << std::setfill('0') << std::setw(3) << ram[op2_addr] << " = ";
-            }
-
-            do_add(op1_addr, op2_addr, op3_addr);
-
-            if (trace) {
-                std::cout << std::setfill('0') << std::setw(3) << ram[op3_addr] << std::endl;
-            }
-            ip+=4;
-            return true;
+            result = next_command.parameter_values[0] + next_command.parameter_values[1];
+            cmd = "ADD";
+            break;
         case OPCODE_MUL:
-            op1_addr = ram[ip+1];
-            op2_addr = ram[ip+2];
-            op3_addr = ram[ip+3];
-            if (trace) {
-                std::cout << "[" << std::setfill('0') << std::setw(4) << ip << "]\tMUL ["
-                          << std::setfill('0') << std::setw(3) << op1_addr << "] ["
-                          << std::setfill('0') << std::setw(3) << op2_addr << "] => ["
-                          << std::setfill('0') << std::setw(3) << op3_addr << "]";
-                std::cout << "\t"
-                          << std::setfill('0') << std::setw(3) << ram[op1_addr] << " * "
-                          << std::setfill('0') << std::setw(3) << ram[op2_addr] << " = ";
-            }
-
-            do_mul(op1_addr, op2_addr, op3_addr);
-
-            if (trace) {
-                std::cout << std::setfill('0') << std::setw(3) << ram[op3_addr] << std::endl;
-            }
-            ip+=4;
-            return true;
-        default:
-            return false;
+            result = next_command.parameter_values[0] * next_command.parameter_values[1];
+            cmd = "MUL";
+            break;
+        case OPCODE_IN:
+            result = input_buf[input_pos++];
+            cmd = "IN";
+            break;
+        case OPCODE_OUT:
+            cmd = "OUT";
+            result = next_command.parameter_values[0];
+            break;
     }
-}
 
-void IntcodeComputer::do_add(int op1_addr, int op2_addr, int result_addr) {
-    ram[result_addr] = ram[op1_addr] + ram[op2_addr];
-}
+    if (trace) {
+        std::cout << cmd << "\t";
+    }
 
-void IntcodeComputer::do_mul(int op1_addr, int op2_addr, int result_addr) {
-    ram[result_addr] = ram[op1_addr] * ram[op2_addr];
+    if (next_command.result_to_ram) {
+        ram[next_command.result_addr] = result;
+        if (trace) {
+            std::cout << "[" << std::setw(4) << next_command.result_addr << "] (" << std::setw(8) << result << ")"
+                      << std::endl;
+        }
+    }
+    else {
+        output_buf.push_back(result);
+        if (trace) {
+            std::cout << " OUTPUT: " << result << std::endl;
+        }
+    }
+    return true;
 }
 
 void IntcodeComputer::set_input(std::vector<int> input) {
     input_buf = std::move(input);
+}
+
+Command IntcodeComputer::load_next_command() {
+
+    int flags = ram[ip] / 100;
+
+    Command result;
+
+    for (int i = 0; i < 2; i++) {
+        result.is_position_mode[i] = !(flags % 10);
+        flags/=10;
+    }
+
+    result.opcode = ram[ip] % 100;
+    result.result_to_ram = true;
+    result.param_count = 0;
+
+    int command_length = 0;
+
+    switch (result.opcode) {
+        case OPCODE_HALT:
+            command_length = 1;
+            break;
+        case OPCODE_ADD:
+            result.param_count = 2;
+            command_length = 4;
+            break;
+        case OPCODE_MUL:
+            result.param_count = 2;
+            command_length = 4;
+            break;
+        case OPCODE_IN:
+            result.param_count = 0;
+            command_length = 2;
+            break;
+        case OPCODE_OUT:
+            result.param_count = 1;
+            result.result_to_ram = false;
+            command_length = 2;
+            break;
+    }
+
+    for (int i = 0; i < result.param_count; i++) {
+        if (result.is_position_mode[i]) {
+            result.parameter_values[i] = ram[ram[ip+1+i]];
+        }
+        else {
+            result.parameter_values[i] = ram[ip+1+i];
+        }
+    }
+    if (result.result_to_ram) {
+        result.result_addr = ram[ip + command_length -1];
+    }
+
+    ip+= command_length;
+    return result;
 }

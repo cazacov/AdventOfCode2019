@@ -6,16 +6,20 @@
 #define DAY_02_01_INTCODECOMPUTER_H
 
 #include <vector>
+#include "Command.h"
 
 class IntcodeComputer {
 private:
+    bool trace;
     std::vector<int> input_buf;
+    int input_pos = 0;
+
     std::vector<int> output_buf;
+    Command load_next_command();
 
     int ip;
-    void do_add(int op1_addr, int op2_addr, int result_addr);
-    void do_mul(int op1_addr, int op2_addr, int result_addr);
 public:
+    IntcodeComputer(bool trace_enabled) : trace(trace_enabled) {};
     std::vector<int> ram;
     void load_program(const char* file_name);
     bool step(bool trace = false);
@@ -28,6 +32,8 @@ public:
             return *output_buf.rbegin();
         }
     }
+
+
 };
 
 

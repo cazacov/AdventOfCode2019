@@ -3,7 +3,7 @@
 
 int main() {
 
-    IntcodeComputer ship_computer;
+    IntcodeComputer ship_computer(true);
     ship_computer.load_program("program.txt");
 
     ship_computer.set_input({1});
