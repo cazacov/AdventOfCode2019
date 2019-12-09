@@ -1,16 +1,11 @@
 #include <utility>
 
-//
-// Created by Victor on 02.12.2019.
-//
-
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <iomanip>
 #include "IntcodeComputer.h"
 #include "Command.h"
-
 
 void IntcodeComputer::load_program(const char *file_name) {
 
@@ -34,9 +29,10 @@ void IntcodeComputer::load_program(const char *file_name) {
         }
     }
     ram_snapshot = ram;
+    i_am_halted = false;
 }
 
-bool IntcodeComputer::step() {
+bool IntcodeComputer::step(bool trace) {
 
     if (trace) {
         std::cout << std::setfill('0') << std::setw(4) << ip << "\t";
@@ -56,11 +52,14 @@ bool IntcodeComputer::step() {
         }
     }
 
+    bool ret_code = false;
+
     switch(next_command.opcode) {
         case OPCODE_HALT:
             if (trace) {
                 std::cout << "HALT" << std::endl;
             }
+            i_am_halted = true;
             return false;
         case OPCODE_ADD:
             result = next_command.parameter_values[0] + next_command.parameter_values[1];
@@ -120,6 +119,7 @@ bool IntcodeComputer::step() {
     }
     if (next_command.destination == ResultDestination::OUT) {
         output_buf.push_back(result);
+        ret_code = true;
         if (trace) {
             std::cout << " OUTPUT: " << result << std::endl;
         }
@@ -130,7 +130,7 @@ bool IntcodeComputer::step() {
         }
         ip = result;
     }
-    return true;
+    return ret_code;
 }
 
 void IntcodeComputer::set_input(std::vector<int> input) {
@@ -219,4 +219,5 @@ void IntcodeComputer::reset() {
     input_pos = 0;
     input_buf.clear();
     output_buf.clear();
+    i_am_halted = false;
 }

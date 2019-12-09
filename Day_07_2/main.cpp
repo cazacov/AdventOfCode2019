@@ -3,46 +3,50 @@
 #include <algorithm>
 #include "IntcodeComputer.h"
 
-IntcodeComputer computer(false);
+IntcodeComputer computer();
 
 const int PHASE_COUNT = 5;
 const int AMPLIFIER_COUNT = 5;
 
-std::vector<std::map<int, int>> cache(PHASE_COUNT);
-
-int calculate_output(int phase, int input) {
-
-    if (!cache[phase].count(input)) {
-        computer.reset();
-        std::vector<int> inp { phase, input};
-        computer.set_input(inp);
-
-        while (computer.step()) {
-            ;
-        }
-        cache[phase][input] =  computer.get_last_output();
-    }
-    return cache[phase][input];
-}
-
 
 int main() {
-    computer.load_program("program.txt");
+
+    IntcodeComputer computers[AMPLIFIER_COUNT];
+    for (int i = 0; i < AMPLIFIER_COUNT; i++) {
+        computers[i].load_program("program.txt");
+    }
 
     std::vector<int> phases(AMPLIFIER_COUNT);
     for (int i = 0; i < AMPLIFIER_COUNT; i++) {
-        phases[i] = i;
+        phases[i] = i+5;
     }
 
     int max_thrust = 0;
 
     do {
-        for (int i = 0; i < PHASE_COUNT; i++) {
+        for (int i = 0; i < AMPLIFIER_COUNT; i++) {
             std::cout << phases[i] << " ";
         }
-        int signal = 0;
+
         for (int i = 0; i < AMPLIFIER_COUNT; i++) {
-            signal = calculate_output(phases[i], signal);
+            IntcodeComputer* computer = &computers[i];
+            computer->reset();
+            computer->add_to_input(phases[i]);
+        }
+
+        int signal = 0;
+        int comp = 0;
+        while (!computers[AMPLIFIER_COUNT-1].is_halted()) {
+            IntcodeComputer* computer = &computers[comp];
+            computer->add_to_input(signal);
+            while (!computer->step(false) && !computer->is_halted()) {
+                ;
+            }
+            signal = computer->get_last_output();
+            comp++;
+            if (comp == AMPLIFIER_COUNT) {
+                comp = 0;
+            }
         }
 
         std::cout << "=> " << signal;
