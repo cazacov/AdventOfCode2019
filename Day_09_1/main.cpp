@@ -7,7 +7,7 @@ int main() {
 
     IntcodeComputer computer;
     computer.load_program("program.txt");
-    computer.add_to_input(1);
+    computer.add_to_input(2);
 
     do  {
         bool has_out = computer.step(false);
