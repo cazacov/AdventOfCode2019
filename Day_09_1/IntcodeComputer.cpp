@@ -197,12 +197,12 @@ Command IntcodeComputer::load_next_command() {
             command_length = 3;
             break;
         case OPCODE_LESS_THAN:
-            result.param_count = 3;
+            result.param_count = 2;
             result.destination = ResultDestination::RAM;
             command_length = 4;
             break;
         case OPCODE_EQUALS:
-            result.param_count = 3;
+            result.param_count = 2;
             result.destination = ResultDestination::RAM;
             command_length = 4;
             break;
@@ -228,7 +228,7 @@ Command IntcodeComputer::load_next_command() {
         if (result.mode[result.param_count] == Mode::Position) {
             result.result_addr = ram[ip + command_length -1];
         } else {
-            result.result_addr = ram[ip + command_length -1 + base];
+            result.result_addr = ram[ip + command_length -1] + base;
         }
     }
 
