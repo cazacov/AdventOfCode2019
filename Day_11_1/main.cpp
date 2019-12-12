@@ -20,6 +20,8 @@ template<> struct std::hash<Panel> {
 
 void robot_move(Panel &panel, int direction);
 
+void render_identifier(std::unordered_map<Panel, int> &hull);
+
 const int COLOR_BLACK = 0;
 const int COLOR_WHITE = 1;
 
@@ -35,6 +37,8 @@ int main() {
     IntcodeComputer computer;
     std::unordered_map<Panel, int> painted_panels;
     int direction = 0;
+
+    hull[current_panel] = COLOR_WHITE;
 
     computer.load_program("program.txt");
     int out[2];
@@ -57,8 +61,55 @@ int main() {
             }
         }
     }
+
+    render_identifier(hull);
+
     std::cout << painted_panels.size();
     return 0;
+}
+
+void render_identifier(std::unordered_map<Panel, int> &hull) {
+
+    // find corner panels
+
+    Panel upper_left { INT32_MAX, INT32_MIN};
+    Panel right_down { INT32_MIN, INT32_MAX};
+
+    for (const auto &pair : hull) {
+        int x = pair.first.x;
+        int y = pair.first.y;
+
+        if (x < upper_left.x) {
+            upper_left.x = x;
+        }
+        if (x > right_down.x) {
+            right_down.x = x;
+        }
+        if (y > upper_left.y) {
+            upper_left.y = y;
+        }
+        if (y < right_down.y) {
+            right_down.y = y;
+        }
+    }
+
+    for (int y = upper_left.y; y >= right_down.y; y--) {
+        for (int x = upper_left.x; x <= right_down.x; x++) {
+            Panel p {x,y};
+            if (hull.count(p)) {
+                if (hull[p] == COLOR_WHITE) {
+                    std::cout << "#";
+                }
+                else {
+                    std::cout << " ";
+                }
+            }
+            else {
+                std::cout << " ";
+            }
+        }
+        std::cout << std::endl;
+    }
 }
 
 void robot_move(Panel &panel, int direction) {
