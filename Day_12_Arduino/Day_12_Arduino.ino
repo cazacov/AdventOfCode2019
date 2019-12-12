@@ -1,5 +1,5 @@
 struct SpaceBody {
-    float position[3];
+    double position[3];
     int velocity[3];
 
     SpaceBody(int x, int y, int z)  {
@@ -27,7 +27,7 @@ void setup() {
 
 void loop() {
 
-  const int animation_steps = 5;
+  const int animation_steps = 10;
   
   // apply gravity
   for (int i = 0; i < 4; i++) {
@@ -47,16 +47,24 @@ void loop() {
   for (int i = 0; i < animation_steps; i++) {
     for (auto &moon : moons) {
       for (int i = 0; i < 3; i++) {
-        moon.position[i] += (float)moon.velocity[i] / animation_steps;
+        moon.position[i] += (double)moon.velocity[i] / animation_steps;
       }
     }
     // show moons
-    for (int j = 0; j < 3; j++) {
-      analogWrite(DAC0, 128 + moons[j].position[0]);
-      analogWrite(DAC1, 128 + moons[j].position[1]);
-      delayMicroseconds(100);
+    for (int j = 0; j < 4; j++) {
+      int x = 128 + moons[j].position[0];
+      int y = 128 + + moons[j].position[1];
+
+      if (x >= 0 && x < 256 && y >=0 && y < 256) {
+        analogWrite(DAC0, x);
+        analogWrite(DAC1, y );
+        delayMicroseconds(1000);
+      }
     }
   }
+  
+ analogWrite(DAC0, 0);
+ analogWrite(DAC1, 0);
 }
 
 int sign(int arg) {
