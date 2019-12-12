@@ -40,10 +40,10 @@ int main() {
     for (int step = 0; step < STEPS; step++) {
 
         for (const auto &moon: moons) {
-            std::cout << "\t(" << std::setw(4) << moon.position[0] << "," << std::setw(4)<< moon.position[1] << "," << std::setw(4)<< moon.position[2] << ")\t";
+            std::cout << "   " << std::setw(4) << moon.position[0] << "," << std::setw(4)<< moon.position[1] << "," << std::setw(4)<< moon.position[2] << "  [" << std::setw(4) << moon.potential_energy() << "]   ";
         }
         for (const auto &moon: moons) {
-            std::cout << "\t(" << std::setw(4) << moon.velocity[0] << "," << std::setw(4)<< moon.velocity[1] << "," << std::setw(4)<< moon.velocity[2] << ")\t";
+            std::cout << "   " << std::setw(4) << moon.velocity[0] << "," << std::setw(4)<< moon.velocity[1] << "," << std::setw(4)<< moon.velocity[2] << "  [" << std::setw(4) << moon.kinetic_energy() << "]   ";
         }
         std::cout << std::endl;
 
