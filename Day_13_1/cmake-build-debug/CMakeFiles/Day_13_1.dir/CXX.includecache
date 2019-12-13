@@ -6,11 +6,31 @@
 
 #IncludeRegexTransform: 
 
-/home/victor/AdventOfCode2019/Day_13_1/Screen.cpp
-Screen.h
-/home/victor/AdventOfCode2019/Day_13_1/Screen.h
+/home/victor/AdventOfCode2019/Day_13_1/Command.h
+
+/home/victor/AdventOfCode2019/Day_13_1/IntcodeComputer.h
+vector
+-
+functional
+-
+Command.h
+/home/victor/AdventOfCode2019/Day_13_1/Command.h
 
 /home/victor/AdventOfCode2019/Day_13_1/Screen.h
 string
 -
+
+/home/victor/AdventOfCode2019/Day_13_1/main.cpp
+iostream
+-
+map
+-
+algorithm
+-
+zconf.h
+-
+IntcodeComputer.h
+/home/victor/AdventOfCode2019/Day_13_1/IntcodeComputer.h
+Screen.h
+/home/victor/AdventOfCode2019/Day_13_1/Screen.h
 
