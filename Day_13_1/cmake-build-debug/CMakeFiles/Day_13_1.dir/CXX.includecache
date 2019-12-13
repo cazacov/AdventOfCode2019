@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/victor/AdventOfCode2019/Day_13_1/Screen.cpp
+Screen.h
+/home/victor/AdventOfCode2019/Day_13_1/Screen.h
+
+/home/victor/AdventOfCode2019/Day_13_1/Screen.h
+string
+-
+
