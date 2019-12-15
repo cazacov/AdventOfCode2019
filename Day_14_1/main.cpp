@@ -18,6 +18,7 @@ struct Chemical {
     std::string name;
     std::vector<Ingredient> inputs;
     int output_qty;
+    std::vector<std::string> required_by;
     bool operator==(const Chemical &other) const {
         return name == other.name;
     }
@@ -35,9 +36,14 @@ struct Reaction {
     Ingredient output;
 };
 
+struct UsageStats {
+    int produced;
+    int used;
+};
+
 std::vector<Reaction> read_reactions(std::string file_name);
 
-int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals);
+int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals, std::unordered_map<std::string, UsageStats> &executed_reactions);
 
 int main() {
 
@@ -56,23 +62,37 @@ int main() {
         chemicals[chemical.name] = chemical;
     }
 
-    int amount = calc_ore_amount("FUEL", 1, chemicals);
+    for (const auto &pair : chemicals) {
+        for (const auto &ingredient : pair.second.inputs) {
+            chemicals[ingredient.chemical_name].required_by.push_back(pair.first);
+        }
+
+    }
+
+    std::unordered_map<std::string, UsageStats> required_ingredients;
+    int amount = calc_ore_amount("FUEL", 1, chemicals, required_ingredients);
     std::cout << amount << std::endl;
     return 0;
 }
 
-int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals) {
+int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals,
+                    std::unordered_map<std::string, UsageStats> &executed_reactions) {
     if (name == "ORE") {
+        executed_reactions["ORE"].used += qty;
+        executed_reactions["ORE"].produced += qty;
         return qty;
     }
 
     auto chemical = chemicals[name];
     int factor = (qty-1) / chemical.output_qty + 1;
-
     int res = 0;
     for (const auto &inp : chemical.inputs) {
-        res += calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals);
+        int produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, executed_reactions);
+        res += produce;
     }
+    executed_reactions[name].produced += chemical.output_qty * factor;
+    executed_reactions[name].used += qty;
+
     return res;
 }
 
