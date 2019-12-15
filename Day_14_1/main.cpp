@@ -36,14 +36,10 @@ struct Reaction {
     Ingredient output;
 };
 
-struct UsageStats {
-    int produced;
-    int used;
-};
-
 std::vector<Reaction> read_reactions(std::string file_name);
 
-int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals, std::unordered_map<std::string, UsageStats> &executed_reactions);
+int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals,
+        std::unordered_map<std::string, int> &overproduced);
 
 int main() {
 
@@ -66,33 +62,39 @@ int main() {
         for (const auto &ingredient : pair.second.inputs) {
             chemicals[ingredient.chemical_name].required_by.push_back(pair.first);
         }
-
     }
 
-    std::unordered_map<std::string, UsageStats> required_ingredients;
-    int amount = calc_ore_amount("FUEL", 1, chemicals, required_ingredients);
+    std::unordered_map<std::string, int> overproduced;
+    int amount = calc_ore_amount("FUEL", 1, chemicals, overproduced);
     std::cout << amount << std::endl;
     return 0;
 }
 
 int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals,
-                    std::unordered_map<std::string, UsageStats> &executed_reactions) {
+                    std::unordered_map<std::string, int> &overproduced) {
     if (name == "ORE") {
-        executed_reactions["ORE"].used += qty;
-        executed_reactions["ORE"].produced += qty;
         return qty;
     }
 
+    if (qty <= overproduced[name]) {
+        overproduced[name] -= qty;
+        return 0;
+    }
+    qty -= overproduced[name];
+
     auto chemical = chemicals[name];
-    int factor = (qty-1) / chemical.output_qty + 1;
+
+    int factor = qty / chemical.output_qty;
+    if (qty % chemical.output_qty > 0) {
+        factor++;
+        overproduced[name] = factor * chemical.output_qty - qty;
+    }
+
     int res = 0;
     for (const auto &inp : chemical.inputs) {
-        int produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, executed_reactions);
+        int produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, overproduced);
         res += produce;
     }
-    executed_reactions[name].produced += chemical.output_qty * factor;
-    executed_reactions[name].used += qty;
-
     return res;
 }
 
