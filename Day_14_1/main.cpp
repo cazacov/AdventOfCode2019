@@ -6,6 +6,7 @@
 #include <sstream>
 #include <algorithm>
 #include <unordered_map>
+#include <iomanip>
 
 struct Chemical;
 
@@ -76,25 +77,48 @@ int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, C
         return qty;
     }
 
-    if (qty <= overproduced[name]) {
-        overproduced[name] -= qty;
-        return 0;
-    }
-    qty -= overproduced[name];
-
     auto chemical = chemicals[name];
 
-    int factor = qty / chemical.output_qty;
-    if (qty % chemical.output_qty > 0) {
-        factor++;
-        overproduced[name] = factor * chemical.output_qty - qty;
+    if (qty <= overproduced[name]) {
+        std::cout << std::setw(4) << qty << " " << chemical.name << " [" << chemical.output_qty << "] \t";
+        std::cout << "(" << overproduced[name] << ") -> (";
+        overproduced[name] -= qty;
+        std::cout << overproduced[name] << ")" << std::endl;
+        return 0;
     }
 
+
+    auto todo = qty - overproduced[name];
+    int factor = todo / chemical.output_qty;
+    if (todo % chemical.output_qty > 0) {
+        factor++;
+    }
+    overproduced[name] = factor * chemical.output_qty - todo;
+
     int res = 0;
+    std::vector<int> inputs;
+
     for (const auto &inp : chemical.inputs) {
         int produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, overproduced);
+        inputs.push_back(produce);
         res += produce;
     }
+
+    std::cout << std::setw(4) << qty;
+    if (qty-todo > 0) {
+        std::cout << "-" << qty-todo;
+    } else {
+        std::cout << "  ";
+    }
+
+    std::cout << std::setw(6) << chemical.name << " [" << chemical.output_qty << "] \t";
+    for (int i = 0; i < chemical.inputs.size(); i++) {
+        std::cout << std::setw(3)<< factor  << "*" << std::setw(3) << chemical.inputs[i].units << " "
+                << std::setw(5) << chemical.inputs[i].chemical_name
+        << " (" << std::setw(6) << inputs[i] << ")   ";
+    }
+    std::cout << "  ==> " << factor * chemical.output_qty << "  (" <<  overproduced[name] << ")" << std::endl;
+
     return res;
 }
 
