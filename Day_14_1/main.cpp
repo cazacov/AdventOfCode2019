@@ -19,7 +19,6 @@ struct Chemical {
     std::string name;
     std::vector<Ingredient> inputs;
     int output_qty;
-    std::vector<std::string> required_by;
     bool operator==(const Chemical &other) const {
         return name == other.name;
     }
@@ -39,8 +38,8 @@ struct Reaction {
 
 std::vector<Reaction> read_reactions(std::string file_name);
 
-int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals,
-        std::unordered_map<std::string, int> &overproduced);
+long calc_ore_amount(std::string name, long qty, std::unordered_map<std::string, Chemical> &chemicals,
+        std::unordered_map<std::string, long> &overproduced);
 
 int main() {
 
@@ -59,21 +58,18 @@ int main() {
         chemicals[chemical.name] = chemical;
     }
 
-    for (const auto &pair : chemicals) {
-        for (const auto &ingredient : pair.second.inputs) {
-            chemicals[ingredient.chemical_name].required_by.push_back(pair.first);
-        }
-    }
+    std::unordered_map<std::string, long> overproduced;
+    overproduced["ORE"] = 1000000000000L;
 
-    std::unordered_map<std::string, int> overproduced;
     int amount = calc_ore_amount("FUEL", 1, chemicals, overproduced);
     std::cout << amount << std::endl;
     return 0;
 }
 
-int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, Chemical> &chemicals,
-                    std::unordered_map<std::string, int> &overproduced) {
+long calc_ore_amount(std::string name, long qty, std::unordered_map<std::string, Chemical> &chemicals,
+                    std::unordered_map<std::string, long> &overproduced) {
     if (name == "ORE") {
+        overproduced["ORE"] -= qty;
         return qty;
     }
 
@@ -88,18 +84,18 @@ int calc_ore_amount(std::string name, int qty, std::unordered_map<std::string, C
     }
 
 
-    auto todo = qty - overproduced[name];
-    int factor = todo / chemical.output_qty;
+    long todo = qty - overproduced[name];
+    long factor = todo / chemical.output_qty;
     if (todo % chemical.output_qty > 0) {
         factor++;
     }
     overproduced[name] = factor * chemical.output_qty - todo;
 
-    int res = 0;
-    std::vector<int> inputs;
+    long res = 0;
+    std::vector<long> inputs;
 
     for (const auto &inp : chemical.inputs) {
-        int produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, overproduced);
+        long produce = calc_ore_amount(inp.chemical_name, inp.units * factor, chemicals, overproduced);
         inputs.push_back(produce);
         res += produce;
     }
