@@ -61,8 +61,26 @@ int main() {
     std::unordered_map<std::string, long> overproduced;
     overproduced["ORE"] = 1000000000000L;
 
-    long amount = calc_ore_amount("FUEL", 1, chemicals, overproduced);
-    std::cout << amount << std::endl;
+    long ore_estimation =  502491;
+    int step_percent = 95;
+    long fuel_produced = 0;
+
+    while (overproduced["ORE"] > 0) {
+
+        long fuel_todo = overproduced["ORE"] * step_percent / ore_estimation / 100;
+        if (fuel_todo == 0) {
+            fuel_todo = 1;
+        }
+        calc_ore_amount("FUEL", fuel_todo, chemicals, overproduced);
+        if (overproduced["ORE"] > 0) {
+            std::cout << fuel_produced << "+" << fuel_todo << " produced,\t" << overproduced["ORE"] << " ore left" << std::endl;
+            fuel_produced += fuel_todo;
+        }
+        else {
+            break;
+        }
+    }
+    std::cout << "Answer: " << fuel_produced << std::endl;
     return 0;
 }
 
