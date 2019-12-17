@@ -8,6 +8,7 @@
 #include <string>
 
 enum Tile {
+    Unknown,
     Blank,
     Wall,
     Oxygen,
