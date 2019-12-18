@@ -18,9 +18,9 @@ void IntcodeComputer::load_program(const char *file_name) {
     int mem_pos = 0;
     while(std::getline(data,line))
     {
-        int comment_idx = line.find_last_not_of("0123456789,-");
+        int comment_idx = line.find_first_not_of("0123456789,-");
         if (comment_idx > 0) {
-            line.erase(comment_idx + 1);
+            line.erase(comment_idx);
         }
         std::stringstream lineStream(line);
         std::string opcode ;

@@ -18,7 +18,7 @@ enum Tile {
 
 class Screen {
 private:
-    void print_at(int x, int y, std::string str);
+    void print_at(int column, int row, std::string str);
 public:
     void cls();
     void draw(int x, int y, Tile tile);

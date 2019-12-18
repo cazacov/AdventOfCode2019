@@ -2,9 +2,9 @@
 
 #include "Screen.h"
 
-void Screen::print_at(int x, int y, std::string str) {
-    if (x > 0 && y > 0) {
-        printf("\033[%d;%dH%s", y, x, str.c_str());
+void Screen::print_at(int column, int row, std::string str) {
+    if (column > 0 && row > 0) {
+        printf("\033[%d;%dH%s", row, column, str.c_str());
         fflush(stdout);
     }
 }
