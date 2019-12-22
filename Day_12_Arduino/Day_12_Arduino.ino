@@ -1,6 +1,10 @@
+#define MOONS 4
+#define DIMENSIONS 3
+
 struct SpaceBody {
-    double position[3];
-    int velocity[3];
+    int position[DIMENSIONS];
+    int velocity[DIMENSIONS];
+    float position_f[DIMENSIONS];  // Float for smooth animation
 
     SpaceBody(int x, int y, int z)  {
         position[0] = x;
@@ -15,14 +19,14 @@ int sign(int i);
 SpaceBody io (4,1,1);
 SpaceBody europa(11, -18, -1);
 SpaceBody ganymede(-2, -10, -4);
-SpaceBody calisto(-7, -2, 14);
+SpaceBody callisto(-7, -2, 14);
 
-SpaceBody moons[4] {io, europa, ganymede, calisto};
+SpaceBody moons[MOONS] {io, europa, ganymede, callisto};
 
 
 void setup() {
   // put your setup code here, to run once:
-  analogWriteResolution(8);
+  analogWriteResolution(10);
 }
 
 void loop() {
@@ -30,11 +34,11 @@ void loop() {
   const int animation_steps = 10;
   
   // apply gravity
-  for (int i = 0; i < 4; i++) {
-      for (int j = i + 1; j < 4; j++) {
+  for (int i = 0; i < MOONS; i++) {
+      for (int j = i + 1; j < MOONS; j++) {
           SpaceBody &moon1 = moons[i];
           SpaceBody &moon2 = moons[j];
-          for (int axis = 0; axis < 3; axis++) {
+          for (int axis = 0; axis < DIMENSIONS; axis++) {
               if (moon1.position[axis] != moon2.position[axis]) {
                   moon1.velocity[axis] += sign(moon2.position[axis] - moon1.position[axis]);
                   moon2.velocity[axis] += sign(moon1.position[axis] - moon2.position[axis]);
@@ -44,27 +48,34 @@ void loop() {
   }
   
   // apply velocity
-  for (int i = 0; i < animation_steps; i++) {
-    for (auto &moon : moons) {
-      for (int i = 0; i < 3; i++) {
-        moon.position[i] += (double)moon.velocity[i] / animation_steps;
-      }
-    }
-    // show moons
-    for (int j = 0; j < 4; j++) {
-      int x = 128 + moons[j].position[0];
-      int y = 128 + + moons[j].position[1];
-
-      if (x >= 0 && x < 256 && y >=0 && y < 256) {
-        analogWrite(DAC0, x);
-        analogWrite(DAC1, y );
-        delayMicroseconds(1000);
-      }
+  for (auto &moon : moons) {
+    for (int i = 0; i < DIMENSIONS; i++) {
+      moon.position_f[i] = moon.position[i];
+      moon.position[i] += moon.velocity[i];
     }
   }
   
- analogWrite(DAC0, 0);
- analogWrite(DAC1, 0);
+  // Animation
+  for (int i = 0; i < animation_steps; i++) {
+    for (auto &moon : moons) {
+      for (int i = 0; i < DIMENSIONS-1; i++) {
+        moon.position_f[i] += (float)moon.velocity[i] / animation_steps;
+      }
+    }
+    // show moons
+    for (int j = 0; j < MOONS; j++) {
+      int x = 512 + moons[j].position_f[0]*4.0;
+      int y = 512 + + moons[j].position_f[1]*4.0;
+
+      if (x >= 0 && x < 1024 && y >=0 && y < 1024) {
+        analogWrite(DAC0, x);
+        analogWrite(DAC1, y);
+        delayMicroseconds(2000);
+      }
+    }
+  }
+  analogWrite(DAC0, 0);
+  analogWrite(DAC1, 0);
 }
 
 int sign(int arg) {
@@ -72,8 +83,7 @@ int sign(int arg) {
         return -1;
     } else if (arg > 0) {
         return 1;
-    }
-    else {
+    } else {
         return 0;
     }
 }
