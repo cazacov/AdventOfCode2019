@@ -17,13 +17,13 @@ struct Pos {
                 result.y -=1;
                 break;
             case 1:
-                result.y +=1;
+                result.x +=1;
                 break;
             case 2:
-                result.x -=1;
+                result.y +=1;
                 break;
             case 3:
-                result.x +=1;
+                result.x -=1;
                 break;
         }
         return result;
@@ -59,24 +59,30 @@ int main() {
 
     std::unordered_map<Pos, int> map;
 
-    int x=0;
-    int y=0;
+    int x=1;
+    int y=1;
+    Pos robot;
+    screen.cls();
     while (!computer.is_halted()) {
         while (!computer.step(false, on_input)) {
             ;
         }
         char ch = computer.get_last_output();
+        Pos pos {x, y};
         if (ch == '#') {
-            Pos pos {x, y};
             map[pos] = 1;
         }
+        if (ch == '^') {
+            robot = pos;
+        }
+        if (ch != 10) {
+            screen.text(x, y, std::string(1,ch));
+        }
         if (ch == 10) {
-            std::cout << std::endl;
             y++;
-            x=0;
+            x=1;
         }
         else {
-            std::cout << ch;
             x++;
         }
     }
@@ -84,6 +90,7 @@ int main() {
     int cols = x+1;
 
     int sum = 0;
+
 
     for (const auto &pair: map) {
         auto &pos = pair.first;
@@ -103,6 +110,10 @@ int main() {
         }
     }
 
-    std::cout << std::endl << sum << std::endl;
+    screen.text(1,40, " ");
+    std::cout << std::endl << "Sum of the alignment parameters: " << sum << std::endl;
+    
+    std::string path = "";
+    int dir = 0;
 }
 

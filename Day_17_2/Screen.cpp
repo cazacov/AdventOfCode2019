@@ -23,6 +23,9 @@ void Screen::draw(int x, int y, Tile tile) {
         case Robot:
             print_at(x, y, "@");
             break;
+        case Unknown:
+            print_at(x, y, "?");
+            break;
     }
 }
 

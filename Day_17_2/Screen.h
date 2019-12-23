@@ -12,7 +12,7 @@ enum Tile {
     Blank,
     Wall,
     Oxygen,
-    Robot
+    Robot,
 };
 
 
