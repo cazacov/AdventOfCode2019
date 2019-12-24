@@ -8,6 +8,9 @@
 #include <unordered_map>
 #include <iterator>
 #include <sstream>
+#include <zconf.h>
+
+using namespace std;
 
 struct Pos {
     int x;
@@ -47,13 +50,26 @@ template<> struct std::hash<Pos> {
     }
 };
 
-std::string render_path(std::vector<int> &path);
 
-int next_input = 0;
+struct State {
+    string path;
+    vector<string> program;
+    vector<string> commands;
+    bool is_valid;
+};
+
+int command_length(string command);
+std::string steps_to_str(int steps);
+State solve(State state);
+
+
+
+string inputs = "";
+int inp_pos = 0;
 long on_input() {
-    return next_input;
+    long result = inputs[inp_pos++];
+    return result;
 }
-
 
 IntcodeComputer computer;
 
@@ -117,7 +133,8 @@ int main() {
     screen.text(1,40, " ");
     std::cout << std::endl << "Sum of the alignment parameters: " << sum << std::endl;
 
-    std::vector<int> path;
+
+    std::string path;
     int dir = 0;
     Pos robot_pos = robot;
     do {
@@ -125,58 +142,181 @@ int main() {
         auto forward = robot_pos.move(dir);
 
         while (map.count(forward)) {
-//            screen.text(forward.x, forward.y, "o");
-          robot_pos = forward;
+            robot_pos = forward;
             steps++;
             forward = robot_pos.move(dir);
         }
         if (steps) {
-            path.push_back(steps);
+            path += steps_to_str(steps);
         }
 
         auto left = robot_pos.move((dir+3) % 4);
         if (map.count(left)) {
-            path.push_back(-1);
+            path+="L";
             dir = (dir+3) % 4;
             continue;
         }
         auto right = robot_pos.move((dir+1) % 4);
         if (map.count(right)) {
-            path.push_back(-2);
+            path+="R";
             dir = (dir+1) % 4;
             continue;
         }
         break;
     } while(true);
 
-    std::cout << "Path: " << render_path(path) << std::endl;
+    std::cout << "Path: " << path << std::endl;
 
-    // Split path in command blocks
+    State state;
+    state.path = path;
+    state.is_valid = false;
+    state.program.clear();
+    state.commands.clear();
 
+    State solution = solve(state);
+    if (!solution.is_valid) {
+        cout << "Solition not found!" << endl;
+        return -1;
+    }
+
+
+
+
+    string program =  std::accumulate(
+        solution.program.begin(),
+        solution.program.end(),
+        string(),
+        [](string &acc, string &code) {
+            return acc.empty() ? code : acc + "," + code;
+        });
+    inputs += program + '\x0A';
+
+
+    for (const string &command : solution.commands) {
+        string command_str =  std::accumulate(
+                command.begin(),
+                command.end(),
+                string(),
+                [](string &acc, const char &code) {
+                    string st;
+                    if (code == 's') {
+                        st = "6";
+                    } else if (code == 'e') {
+                        st = "8";
+                    } else if (code == 't') {
+                        st = "12";
+                    } else {
+                        st = code;
+                    }
+                    return acc.empty() ? st : acc + "," + st;
+                });
+        inputs += command_str + '\x0A';
+    }
+
+    computer.load_program("program.txt");
+//    computer.reset();
+    computer.ram[0] = 2;    // wake the vacuum robot
+
+    inputs += "n"; // np video
+
+    while (!computer.is_halted()) {
+
+        bool out = computer.step(false, on_input);
+        if (out) {
+            auto last = computer.get_last_output();
+            if (last > 256) {
+                cout << "Vacuum robot report: " << last << endl;
+                break;
+            }
+        }
+    }
 
     return 0;
 
 }
 
-std::string render_path(std::vector<int> &path) {
+State solve(State state) {
 
-    return std::accumulate(path.begin(), path.end(), std::string(""),
-            [](std::string acc, int command) {
 
-        if (acc!="") {
-            acc +=",";
-        }
+    // Try re-use existing commands
+    if (state.program.size() < 20 && !state.commands.empty()) {
+        for (int i = 0; i < state.commands.size(); i++) {
+            string command = state.commands[i];
+            if (command == state.path) {
+                state.program.push_back( string(1, 'A' + i));
+                state.is_valid = true;
+                return  state;
+            }
+            if (state.path.rfind(command, 0) == 0) { // remaining path starts with a command
 
-        if (command == -1) {
-            return acc+"L";
+                State newState {
+                        state.path.substr(command.length(), 1000),
+                        state.program,
+                        state.commands,
+                        false,
+                };
+                newState.program.push_back( string(1, 'A' + i));
+                State res = solve(newState);
+                if (res.is_valid) {
+                    return res;
+                }
+            }
         }
-        else if (command == -2) {
-            return acc + "R";
+    }
+
+    // Try add new command
+    if (state.commands.size() < 3) {
+        for (int com_length = 2; com_length <= state.path.size(); com_length+=2) {
+            auto candidate = state.path.substr(0, com_length);
+
+            if (find(state.commands.begin(), state.commands.end(), candidate) != state.commands.end()) {
+                //command already in the list, skip it
+                continue;
+            }
+            if (command_length(candidate) <= 20) {
+                State newState {
+                        state.path,
+                        state.program,
+                        state.commands,
+                        false,
+                };
+                newState.commands.push_back(candidate);
+                State res = solve(newState);
+                if (res.is_valid) {
+                    return res;
+                }
+            }
+            else {
+                break;
+            }
         }
-        else {
-            return acc + std::to_string(command);
-        }
-    });
+    }
+    state.is_valid = false;
+    return state;
 }
 
+std::string steps_to_str(int steps) {
+    switch (steps) {
+        case 6:
+            return "s";
+        case 8:
+            return "e";
+        case 12:
+            return "t";
+        default:
+            return "?";
+    }
+}
 
+int command_length(string command) {
+    int result = 0;
+    for (const auto &ch: command) {
+        if (ch == 't') {
+            result +=3;
+        }
+        else {
+            result+=2;
+        }
+    }
+    return result - 1; // do not include last comma
+}
