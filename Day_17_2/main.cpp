@@ -47,6 +47,8 @@ template<> struct std::hash<Pos> {
     }
 };
 
+std::string render_path(std::vector<int> &path);
+
 int next_input = 0;
 long on_input() {
     return next_input;
@@ -115,7 +117,7 @@ int main() {
     screen.text(1,40, " ");
     std::cout << std::endl << "Sum of the alignment parameters: " << sum << std::endl;
 
-    std::vector<std::string> path;
+    std::vector<int> path;
     int dir = 0;
     Pos robot_pos = robot;
     do {
@@ -129,29 +131,52 @@ int main() {
             forward = robot_pos.move(dir);
         }
         if (steps) {
-            path.push_back(std::to_string(steps));
+            path.push_back(steps);
         }
 
         auto left = robot_pos.move((dir+3) % 4);
         if (map.count(left)) {
-            path.push_back("L");
+            path.push_back(-1);
             dir = (dir+3) % 4;
             continue;
         }
         auto right = robot_pos.move((dir+1) % 4);
         if (map.count(right)) {
-            path.push_back("R");
+            path.push_back(-2);
             dir = (dir+1) % 4;
             continue;
         }
         break;
     } while(true);
 
-    std::stringstream  s;
-    copy(path.begin(),path.end(), std::ostream_iterator<std::string>(s, ","));
+    std::cout << "Path: " << render_path(path) << std::endl;
 
-    std::cout << "Path: " << s.str() << std::endl;
+    // Split path in command blocks
+
+
     return 0;
 
 }
+
+std::string render_path(std::vector<int> &path) {
+
+    return std::accumulate(path.begin(), path.end(), std::string(""),
+            [](std::string acc, int command) {
+
+        if (acc!="") {
+            acc +=",";
+        }
+
+        if (command == -1) {
+            return acc+"L";
+        }
+        else if (command == -2) {
+            return acc + "R";
+        }
+        else {
+            return acc + std::to_string(command);
+        }
+    });
+}
+
 
