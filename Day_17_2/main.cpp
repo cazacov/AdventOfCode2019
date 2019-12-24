@@ -6,6 +6,8 @@
 #include "Screen.h"
 #include "vector"
 #include <unordered_map>
+#include <iterator>
+#include <sstream>
 
 struct Pos {
     int x;
@@ -112,8 +114,44 @@ int main() {
 
     screen.text(1,40, " ");
     std::cout << std::endl << "Sum of the alignment parameters: " << sum << std::endl;
-    
-    std::string path = "";
+
+    std::vector<std::string> path;
     int dir = 0;
+    Pos robot_pos = robot;
+    do {
+        int steps = 0;
+        auto forward = robot_pos.move(dir);
+
+        while (map.count(forward)) {
+//            screen.text(forward.x, forward.y, "o");
+          robot_pos = forward;
+            steps++;
+            forward = robot_pos.move(dir);
+        }
+        if (steps) {
+            path.push_back(std::to_string(steps));
+        }
+
+        auto left = robot_pos.move((dir+3) % 4);
+        if (map.count(left)) {
+            path.push_back("L");
+            dir = (dir+3) % 4;
+            continue;
+        }
+        auto right = robot_pos.move((dir+1) % 4);
+        if (map.count(right)) {
+            path.push_back("R");
+            dir = (dir+1) % 4;
+            continue;
+        }
+        break;
+    } while(true);
+
+    std::stringstream  s;
+    copy(path.begin(),path.end(), std::ostream_iterator<std::string>(s, ","));
+
+    std::cout << "Path: " << s.str() << std::endl;
+    return 0;
+
 }
 
