@@ -7,6 +7,9 @@
 
 using namespace std;
 
+#define PORTAL_OUTER 1
+#define PORTAL_INNER -1
+
 vector<vector<char>> read_map(string file_name);
 void show_map(const vector<vector<char>>  &map);
 void remove_deadends(vector<vector<char>> &map);
@@ -15,12 +18,15 @@ void show_cyan(int x, int y, char ch);
 
 unsigned char display(const char &ch);
 
+int portal_level(int x, int y, int height, int width);
+
 const int offsets[4][2] {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
 
 struct Cell {
     int x;
     int y;
-    int level = 0;
+    int portal_type = 0;
+    string portal_code;
     int distance = 1;
     bool operator==(const Cell &other) const{
         return x == other.x && y == other.y;
@@ -38,15 +44,24 @@ template<> struct std::hash<Cell> {
     }
 };
 
+int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell &came_from, int &min_distance, unordered_map<Cell, unordered_set<Cell>> &connections);
+
 
 int main() {
     auto map = read_map("input.txt");
     show_map(map);
     remove_deadends(map);
 
+    int map_height = map.size();
+    int map_width = 0;
+
+
     unordered_map<Cell, unordered_set<Cell>> connections;
-    for (int y = 0; y < map.size(); y++) {
+    for (int y = 0; y < map_height; y++) {
         for (int x = 0; x < map[y].size(); x++) {
+            if (map[0].size() > map_width) {
+                map_width = map[0].size();
+            }
             if (map[y][x] != '.') {
                 continue;
             }
@@ -90,85 +105,70 @@ int main() {
         }
     } while(!to_erase.empty());
 
-
     unordered_map <string, Cell> portals;
 
     // process portals
-    for (int y = 0; y < map.size(); y++) {
-        for (int x = 0; x < map[y].size(); x++) {
-            if (map[y][x] != '.') {
-                continue;
-            }
-            Cell cell{x, y};
-            unordered_set<Cell> &neighbours = connections[cell];
+    for (const auto &pair : connections) {
+        Cell &cell = pair.first;
+        unordered_set<Cell> &neighbours = pair.second;
 
-            for (int i = 0; i < 4; i++) {
-                Cell neighbour{
-                        x + offsets[i][1],
-                        y + offsets[i][0]
+        for (int i = 0; i < 4; i++) {
+            Cell neighbour{
+                    cell.x + offsets[i][1],
+                    cell.y + offsets[i][0]
+            };
+            if (isalpha(map[neighbour.y][neighbour.x])) {
+                // We have an alpha character here
+                string portal_name = string(1,map[neighbour.y][neighbour.x]);
+                Cell neighbour2{
+                        x + 2*offsets[i][1],
+                        y + 2*offsets[i][0]
                 };
-                if (isalpha(map[neighbour.y][neighbour.x])) {
-                    // We have an alpha character here
-                    string portal_name = string(1,map[neighbour.y][neighbour.x]);
-                    Cell neighbour2{
-                            x + 2*offsets[i][1],
-                            y + 2*offsets[i][0]
-                    };
-                    portal_name += string(1,map[neighbour2.y][neighbour2.x]);
-                    // normalize name
-                    std::sort(portal_name.begin(), portal_name.end());
-                    if (portals.count(portal_name)) {
-                        auto other = portals[portal_name];
-                        connections[cell].insert(other);
-                        connections[other].insert(cell);
-                        show_green(cell.x, cell.y, 'o');
-                        show_green(other.x, other.y, 'o');
-                    } else {
-                        portals[portal_name] = cell;
-                    }
-                }
+                portal_name += string(1,map[neighbour2.y][neighbour2.x]);
+                // normalize name
+                std::sort(portal_name.begin(), portal_name.end());
+                cell.portal_type = portal_level(cell.x, cell.y, map_width, map_height);
+                cell.portal_code = portal_name;
+                if (portals.count(portal_name)) {
+                    auto other = portals[portal_name];
+                    connections[cell].insert(other);
+                    connections[other].insert(cell);
+                    show_green(cell.x, cell.y, cell.portal_type == PORTAL_OUTER ? 'O' : 'o');
+                    show_green(other.x, other.y, other.portal_type == PORTAL_OUTER ? 'O' : 'o');
+                } else {
+                    cell.portal_code = portal_name;
+                    portals[portal_name] = cell;
 
+                }
             }
+
         }
     }
 
-    // find the shortest path
-    // Dijkstra's algorithm
-    // https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm
 
-    std::unordered_map<Cell, int> unvisited_set;
-    for (const auto &pair : connections) {
-        unvisited_set[pair.first] = INT32_MAX;
-    }
+    int shortest_path = INT32_MAX;
 
     Cell from = portals["AA"];
     Cell to = portals["ZZ"];
 
-    unvisited_set[from] = 0;
+    show_green(1, map_height+1, '_');
 
-    auto current_node = from;
-    while (current_node != to) {
-        for (auto neighbour : connections[current_node]) {
-            if (!unvisited_set.count(neighbour)) {
-                continue;
-            }
-            int new_distance = unvisited_set[current_node] + neighbour.distance;
-            if (unvisited_set[neighbour] > new_distance) {
-                unvisited_set[neighbour] = new_distance;
-            }
-        }
-        unvisited_set.erase(current_node);
-        int min_distance = INT32_MAX;
-        for (const auto &pair : unvisited_set) {
-            if (pair.second < min_distance) {
-                current_node = pair.first;
-                min_distance = pair.second;
-            }
-        }
-    }
-
-    cout <<  unvisited_set[current_node] << endl;
+    int path = find_path_to(from, to, 0, 0, from, shortest_path, connections);
+    cout << "Path length: " << path;
     return 0;
+}
+
+
+
+int portal_level(int x, int y, int width, int height) {
+
+    if (x < 5 || x >= width-5) {
+        return PORTAL_OUTER;
+    }
+    if (y < 5 || y >= height-5) {
+        return +1;
+    }
+    return PORTAL_INNER;
 }
 
 void show_red(int x, int y, char ch) {
@@ -252,6 +252,63 @@ void show_green(int x, int y, char ch) {
     printf("\033[32m\033[%d;%dH%c\033[0m", y+1, x+1, ch);
     fflush(stdout);
 }
+
+int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell &came_from, int &min_distance,
+                 unordered_map<Cell, unordered_set<Cell>> &connections) {
+
+    if (start == to && start_level == 0) {
+        return start_distance;
+    }
+
+    if (start_level < 0) {
+        cout << "That cannot be true!";
+        exit(-1);
+    }
+    if (start_level > 100) {
+        cout << "Recursion too deep";
+        exit(-1);
+    }
+
+    auto &neighbours = connections[start];
+
+    for (const Cell &neighbour : neighbours) {
+
+        if (neighbour == came_from) {
+            // We have just came from that cell
+            continue;
+        }
+
+        int new_level = start_level;
+        if (neighbour.portal_type) {
+            if (neighbour.portal_code == "AA" || neighbour.portal_code == "ZZ") {
+                if (start_level != 0) {
+                    continue;
+                }
+            }
+            else {
+                if (start_level == 0 && neighbour.portal_type == PORTAL_OUTER) {
+                    continue;
+                }
+            }
+        }
+
+        if (start.portal_type && neighbour.portal_type && neighbour.distance == 1) {
+            // Warp from portal to portal
+            new_level += neighbour.portal_type == PORTAL_OUTER ? 1 : -1;
+        }
+        int neighbour_distance = start_distance + neighbour.distance;
+        if (neighbour_distance > min_distance) {
+            continue;
+        }
+        int result = find_path_to(neighbour, to, new_level, neighbour_distance, start, min_distance, connections);
+        if (result > 0 && result < min_distance) {
+            min_distance = result;
+            return min_distance;
+        }
+    }
+    return 0;
+}
+
 
 
 
