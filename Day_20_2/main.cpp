@@ -64,9 +64,13 @@ struct Path {
     int level;
 };
 
+int n=0;
+
 
 int find_path_to(Cell start, int start_level, int start_distance, int &min_distance, unordered_map<Point, Cell> &connections, vector<Path> &path);
 
+
+void print_path(int n, vector<Path> &vector, unordered_map<Point, Cell> &map);
 
 int main() {
     auto map = read_map("input.txt");
@@ -177,8 +181,14 @@ int main() {
 
     vector<Path> path;
 
-    int path_length = find_path_to(from, 0, 0, shortest_path, connections, path);
-    cout << "Path length: " << path_length << endl;
+    find_path_to(from, 0, 0, shortest_path, connections, path);
+
+    if (shortest_path < INT32_MAX) {
+        cout << "Path found! Length: " << shortest_path << endl;
+    }
+    else {
+        cout << "Path not found." << endl;
+    }
     return 0;
 }
 
@@ -322,7 +332,7 @@ int find_path_to(Cell start, int start_level, int start_distance, int &min_dista
             // Check if we someday have already passed through that portal
             bool loop_found = false;
             for (const auto &path_elem : path) {
-                if (path_elem.from == start && path_elem.to == neighbour_cord) {
+                if (path_elem.from == start && path_elem.to == neighbour_cord && path_elem.level < new_level) {
                     loop_found = true;
                     break;
                 }
@@ -342,6 +352,8 @@ int find_path_to(Cell start, int start_level, int start_distance, int &min_dista
             start, neighbour_cord, neighbour_cord.distance, new_level
         };
         path.push_back(path_element);
+        n++;
+        print_path(n, path, connections);
         int result = find_path_to(neighbour, new_level, neighbour_distance, min_distance, connections, path);
         path.pop_back();
         if (result > 0 && result < min_distance) {
@@ -350,6 +362,22 @@ int find_path_to(Cell start, int start_level, int start_distance, int &min_dista
         }
     }
     return 0;
+}
+
+void print_path(int n, vector<Path> &vector, unordered_map<Point, Cell> &map) {
+
+    std::cout << n << "\t";
+    for (const auto &elem : vector) {
+        cout << " -" << elem.distance << "-> ";
+        auto cell = map[elem.to];
+        if (cell.portal_type) {
+            cout << cell.portal_code;
+        } else {
+            cout << "(" << elem.to.x << "," << elem.to.y << ")";
+        }
+        cout<<elem.level;
+    }
+    cout << endl;
 }
 
 
