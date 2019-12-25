@@ -11,13 +11,17 @@ vector<vector<char>> read_map(string file_name);
 void show_map(const vector<vector<char>>  &map);
 void remove_deadends(vector<vector<char>> &map);
 void show_green(int x, int y, char ch);
+void show_cyan(int x, int y, char ch);
 
-const int offsets[4][2] { {-1,0}, {0,1}, {1,0}, {0,-1}};
+unsigned char display(const char &ch);
+
+const int offsets[4][2] {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
 
 struct Cell {
     int x;
     int y;
-
+    int level = 0;
+    int distance = 1;
     bool operator==(const Cell &other) const{
         return x == other.x && y == other.y;
     }
@@ -61,6 +65,32 @@ int main() {
         }
     }
 
+    // Simplify connections
+    vector<Cell> to_erase;
+    do {
+        for (const Cell &kill: to_erase) {
+            connections.erase(kill);
+            show_cyan(kill.x, kill.y, '#');
+        }
+        to_erase.clear();
+
+        for (const auto &pair : connections) {
+            if (pair.second.size()==2) {
+                Cell left = *pair.second.begin();
+                Cell right = *(++pair.second.begin());
+                int distance = left.distance + right.distance;
+                left.distance = distance;
+                right.distance = distance;
+                connections[left].erase(pair.first);
+                connections[left].insert(right);
+                connections[right].erase(pair.first);
+                connections[right].insert(left);
+                to_erase.push_back(pair.first);
+            }
+        }
+    } while(!to_erase.empty());
+
+
     unordered_map <string, Cell> portals;
 
     // process portals
@@ -91,8 +121,8 @@ int main() {
                         auto other = portals[portal_name];
                         connections[cell].insert(other);
                         connections[other].insert(cell);
-                        show_green(cell.x, cell.y, '.');
-                        show_green(other.x, other.y, '.');
+                        show_green(cell.x, cell.y, 'o');
+                        show_green(other.x, other.y, 'o');
                     } else {
                         portals[portal_name] = cell;
                     }
@@ -118,12 +148,11 @@ int main() {
 
     auto current_node = from;
     while (current_node != to) {
-        int new_distance = unvisited_set[current_node] + 1;
-
         for (auto neighbour : connections[current_node]) {
             if (!unvisited_set.count(neighbour)) {
                 continue;
             }
+            int new_distance = unvisited_set[current_node] + neighbour.distance;
             if (unvisited_set[neighbour] > new_distance) {
                 unvisited_set[neighbour] = new_distance;
             }
@@ -144,6 +173,11 @@ int main() {
 
 void show_red(int x, int y, char ch) {
     printf("\033[31m\033[%d;%dH%c\033[0m", y+1, x+1, ch);
+    fflush(stdout);
+}
+
+void show_cyan(int x, int y, char ch) {
+    printf("\033[36m\033[%d;%dH%c\033[0m", y+1, x+1, ch);
     fflush(stdout);
 }
 
@@ -169,7 +203,7 @@ void remove_deadends(vector<vector<char>> &map) {
                 if (walls == 3) {
                     map[y][x] = '#';
                     deadends_found = true;
-                    show_red(x, y, '#');
+                    show_red(x, y, '.');
                 }
             }
         }
@@ -182,9 +216,21 @@ void show_map(const vector<vector<char>>  &map) {
 
     for (int y = 0; y < map.size(); y++) {
         for (int x = 0; x < map[y].size(); x++) {
-            printf("\033[%d;%dH%c", y+1, x+1, map[y][x]);
+            printf("\033[%d;%dH%c", y+1, x+1, display(map[y][x]));
             fflush(stdout);
         }
+    }
+}
+
+unsigned char display(const char &ch) {
+    if (ch == '#') {
+        return '.';
+    }
+    else if (ch == '.') {
+        return '#';
+    }
+    else {
+        return ch;
     }
 }
 
