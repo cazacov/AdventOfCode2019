@@ -22,29 +22,50 @@ int portal_level(int x, int y, int height, int width);
 
 const int offsets[4][2] {{-1, 0}, {0, 1}, {1, 0}, {0, -1}};
 
-struct Cell {
+struct Point {
     int x;
     int y;
-    int portal_type = 0;
-    string portal_code;
-    int distance = 1;
-    bool operator==(const Cell &other) const{
+    int distance;
+
+    Point() : x(0), y(0), distance(1){}
+    Point(int _x, int _y) : x(_x), y(_y),distance(1) {}
+
+    bool operator==(const Point &other) const{
         return x == other.x && y == other.y;
     }
 
-    bool operator!=(const Cell &other) const{
+    bool operator!=(const Point &other) const{
         return x != other.x || y != other.y;
     }
 };
 
 // Required by unordered_map
-template<> struct std::hash<Cell> {
-    std::size_t operator() (const Cell &node) const {
+template<> struct std::hash<Point> {
+    std::size_t operator() (const Point &node) const {
         return (hash<int>()(node.x) << 4) ^ hash<int>()(node.y);
     }
 };
 
-int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell &came_from, int &min_distance, unordered_map<Cell, unordered_set<Cell>> &connections);
+
+struct Cell : public Point {
+
+    Cell () : Point(0,0){}
+    Cell(int x, int y) : Point(x,y) {  neighbours.empty();}
+    int portal_type = 0;
+    string portal_code;
+
+    unordered_set<Point> neighbours;
+};
+
+struct Path {
+    Point from;
+    Point to;
+    int distance;
+    int level;
+};
+
+
+int find_path_to(Cell start, int start_level, int start_distance, int &min_distance, unordered_map<Point, Cell> &connections, vector<Path> &path);
 
 
 int main() {
@@ -56,73 +77,72 @@ int main() {
     int map_width = 0;
 
 
-    unordered_map<Cell, unordered_set<Cell>> connections;
+    unordered_map<Point, Cell> connections;
     for (int y = 0; y < map_height; y++) {
         for (int x = 0; x < map[y].size(); x++) {
-            if (map[0].size() > map_width) {
-                map_width = map[0].size();
+            if (map[y].size() > map_width) {
+                map_width = map[y].size();
             }
             if (map[y][x] != '.') {
                 continue;
             }
             Cell cell{x, y};
-            unordered_set<Cell> &neighbours = connections[cell];
-
+            connections[cell] = cell;
             for (int i = 0; i < 4; i++) {
-                Cell neighbour{
+                Point neighbour{
                         x + offsets[i][1],
                         y + offsets[i][0]
                 };
                 if (map[neighbour.y][neighbour.x] == '.') {
-                    connections[cell].insert(neighbour);
+                    connections[cell].neighbours.insert(neighbour);
                 }
             }
         }
     }
 
     // Simplify connections
-    vector<Cell> to_erase;
+    vector<Point> to_erase;
     do {
-        for (const Cell &kill: to_erase) {
+        for (const Point &kill: to_erase) {
             connections.erase(kill);
             show_cyan(kill.x, kill.y, '#');
         }
         to_erase.clear();
 
         for (const auto &pair : connections) {
-            if (pair.second.size()==2) {
-                Cell left = *pair.second.begin();
-                Cell right = *(++pair.second.begin());
+            Cell &cell = connections[pair.first];
+            if (cell.neighbours.size()==2) {
+                Point left = *cell.neighbours.begin();
+                Point right = *(++cell.neighbours.begin());
                 int distance = left.distance + right.distance;
                 left.distance = distance;
                 right.distance = distance;
-                connections[left].erase(pair.first);
-                connections[left].insert(right);
-                connections[right].erase(pair.first);
-                connections[right].insert(left);
+                connections[left].neighbours.erase(pair.first);
+                connections[left].neighbours.insert(right);
+                connections[right].neighbours.erase(pair.first);
+                connections[right].neighbours.insert(left);
                 to_erase.push_back(pair.first);
             }
         }
     } while(!to_erase.empty());
 
-    unordered_map <string, Cell> portals;
+    unordered_map <string, Point> portals;
 
     // process portals
     for (const auto &pair : connections) {
-        Cell &cell = pair.first;
-        unordered_set<Cell> &neighbours = pair.second;
+        Cell &cell = connections[pair.first];
 
         for (int i = 0; i < 4; i++) {
-            Cell neighbour{
+            Point neighbour{
                     cell.x + offsets[i][1],
                     cell.y + offsets[i][0]
             };
             if (isalpha(map[neighbour.y][neighbour.x])) {
                 // We have an alpha character here
                 string portal_name = string(1,map[neighbour.y][neighbour.x]);
-                Cell neighbour2{
-                        x + 2*offsets[i][1],
-                        y + 2*offsets[i][0]
+                Point neighbour2{
+                        cell.x + 2*offsets[i][1],
+                        cell.y + 2*offsets[i][0]
                 };
                 portal_name += string(1,map[neighbour2.y][neighbour2.x]);
                 // normalize name
@@ -130,15 +150,17 @@ int main() {
                 cell.portal_type = portal_level(cell.x, cell.y, map_width, map_height);
                 cell.portal_code = portal_name;
                 if (portals.count(portal_name)) {
-                    auto other = portals[portal_name];
-                    connections[cell].insert(other);
-                    connections[other].insert(cell);
+                    Point other_p = portals[portal_name];
+                    Cell &other = connections[other_p];
+                    other_p.distance = 1;
+                    cell.neighbours.insert(other_p);
+                    Point cell_cord {cell.x, cell.y};
+                    other.neighbours.insert(cell_cord);
                     show_green(cell.x, cell.y, cell.portal_type == PORTAL_OUTER ? 'O' : 'o');
                     show_green(other.x, other.y, other.portal_type == PORTAL_OUTER ? 'O' : 'o');
                 } else {
                     cell.portal_code = portal_name;
                     portals[portal_name] = cell;
-
                 }
             }
 
@@ -148,13 +170,15 @@ int main() {
 
     int shortest_path = INT32_MAX;
 
-    Cell from = portals["AA"];
-    Cell to = portals["ZZ"];
+    Cell from = connections[portals["AA"]];
+    Cell to = connections[portals["ZZ"]];
 
     show_green(1, map_height+1, '_');
 
-    int path = find_path_to(from, to, 0, 0, from, shortest_path, connections);
-    cout << "Path length: " << path;
+    vector<Path> path;
+
+    int path_length = find_path_to(from, 0, 0, shortest_path, connections, path);
+    cout << "Path length: " << path_length << endl;
     return 0;
 }
 
@@ -253,10 +277,9 @@ void show_green(int x, int y, char ch) {
     fflush(stdout);
 }
 
-int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell &came_from, int &min_distance,
-                 unordered_map<Cell, unordered_set<Cell>> &connections) {
+int find_path_to(Cell start, int start_level, int start_distance, int &min_distance, unordered_map<Point, Cell> &connections, vector<Path> &path) {
 
-    if (start == to && start_level == 0) {
+    if (start.portal_type && start.portal_code == "ZZ" && start_level == 0) {
         return start_distance;
     }
 
@@ -269,16 +292,21 @@ int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell
         exit(-1);
     }
 
-    auto &neighbours = connections[start];
+    for (const Point &neighbour_cord : start.neighbours) {
+        Cell &neighbour = connections[neighbour_cord];
 
-    for (const Cell &neighbour : neighbours) {
-
-        if (neighbour == came_from) {
+        if (!path.empty() && path.back().from == neighbour_cord) {
             // We have just came from that cell
             continue;
         }
 
         int new_level = start_level;
+        if (start.portal_type && neighbour.portal_type && neighbour_cord.distance == 1) {
+            // Warp from portal to portal
+            new_level += neighbour.portal_type == PORTAL_OUTER ? 1 : -1;
+        }
+
+
         if (neighbour.portal_type) {
             if (neighbour.portal_code == "AA" || neighbour.portal_code == "ZZ") {
                 if (start_level != 0) {
@@ -286,21 +314,36 @@ int find_path_to(Cell start, Cell &to, int start_level, int start_distance, Cell
                 }
             }
             else {
-                if (start_level == 0 && neighbour.portal_type == PORTAL_OUTER) {
+                if (new_level == 0 && neighbour.portal_type == PORTAL_OUTER) { // allowed to exit only through AA or ZZ
                     continue;
                 }
             }
-        }
 
-        if (start.portal_type && neighbour.portal_type && neighbour.distance == 1) {
-            // Warp from portal to portal
-            new_level += neighbour.portal_type == PORTAL_OUTER ? 1 : -1;
+            // Check if we someday have already passed through that portal
+            bool loop_found = false;
+            for (const auto &path_elem : path) {
+                if (path_elem.from == start && path_elem.to == neighbour_cord) {
+                    loop_found = true;
+                    break;
+                }
+            }
+            if (loop_found) {
+                continue;
+            }
+
+
         }
-        int neighbour_distance = start_distance + neighbour.distance;
+        int neighbour_distance = start_distance + neighbour_cord.distance;
         if (neighbour_distance > min_distance) {
             continue;
         }
-        int result = find_path_to(neighbour, to, new_level, neighbour_distance, start, min_distance, connections);
+
+        Path path_element = Path {
+            start, neighbour_cord, neighbour_cord.distance, new_level
+        };
+        path.push_back(path_element);
+        int result = find_path_to(neighbour, new_level, neighbour_distance, min_distance, connections, path);
+        path.pop_back();
         if (result > 0 && result < min_distance) {
             min_distance = result;
             return min_distance;
