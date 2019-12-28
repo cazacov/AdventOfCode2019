@@ -17,52 +17,45 @@ long on_input() {
 
 using namespace std;
 
-IntcodeComputer computer;
 vector<long> convert_program(vector<string> program);
 
 int main() {
-    computer.load_program("program.txt");
 
-    vector<string> program {
-        "NOT C J",  // jump = !c
-        "NOT B T",  // t = !b
-        "OR T J",   // jump = !b | !c
-        "NOT A T",  // t = !a
-        "OR T J",   // jump = !a | !b | !c
-        "AND D J",  // jump = d & (!a | !b | !c)
-        "NOT J T",  // t = false if jump is set
-        "OR E T",   // t = E
-        "OR H T",   // t = E | H
-        "AND T J",  // jump = D & (!a | !b | !c) & (e | h)
-        "RUN"
-};
+    vector <IntcodeComputer> network;
 
-    computer.set_input(convert_program(program));
+    for (int i = 0; i < 50; i++) {
+        IntcodeComputer computer;
+        computer.load_program("program.txt");
+        computer.set_input(vector<long> {i});
+        computer.set_default_input(-1);
+        network.push_back(computer);
+    }
 
-    while(!computer.is_halted()) {
-        auto has_out = computer.step(false, nullptr);
-        if (!has_out) {
-            continue;
-        }
+    vector <vector<long>> packets(50);
 
-        long res = computer.get_last_output();
-        if (res > 255) {
-            // robot succeded
-            cout << endl << "Robot reports: hull damage " << res;
-            break;
-        } else {
-            if (res == 10)
-            {
-                cout << endl;
+    int addr = 0;
+    do {
+        for (int i = 0; i < network.size(); i++) {
+            auto &computer = network[i];
+            if (computer.is_halted()) {
+                continue;
             }
-            else {
-                cout << (char) res;
+            bool has_output = computer.step(false, nullptr);
+            if (has_output) {
+                packets[i].push_back(computer.get_last_output());
+                if (packets[i].size() == 3) {
+                    addr = packets[i][0];
+                    long x = packets[i][1];
+                    long y = packets[i][2];
+                    if (addr < 50) {
+                        network[addr].set_input(vector<long>{x, y});
+                    }
+                    cout << "Packet [" << x << "," << y << "] has benn sent from "<< i << " to " << addr <<endl;
+                    packets[i].clear();
+                }
             }
         }
-    }
-    if (computer.is_halted()) {
-        cout << "Program halted";
-    }
+    } while (addr != 255);
 }
 
 long get_status(IntcodeComputer &computer, int x, int y) {

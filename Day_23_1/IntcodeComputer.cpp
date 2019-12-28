@@ -12,6 +12,7 @@ void IntcodeComputer::load_program(const char *file_name) {
     std::vector<long> result;
     ram.resize(RAM_SIZE, 0);
     ip = 0;
+    input_pos = 0;
 
     std::ifstream  data(file_name);
     std::string line;
@@ -77,7 +78,16 @@ bool IntcodeComputer::step(bool trace, std::function<long(void)> const input_req
                 result = input_buf[input_pos++];
             }
             else {
-                result = input_required();
+                if (input_required) {
+                    result = input_required();
+                }
+                else if (default_input_set) {
+                    result = default_input;
+                }
+                else {
+                    std::cout << "OMG, I do not know what to do!" << std::endl;
+                    i_am_halted = true;
+                }
             }
             cmd = "IN";
             break;
@@ -150,8 +160,9 @@ bool IntcodeComputer::step(bool trace, std::function<long(void)> const input_req
 }
 
 void IntcodeComputer::set_input(std::vector<long> input) {
-    input_buf = std::move(input);
-    input_pos = 0;
+
+    input_buf.insert(input_buf.end(), input.begin(), input.end());
+//    input_pos = 0;
 }
 
 Command IntcodeComputer::load_next_command() {
