@@ -27,19 +27,13 @@ private:
     int base;
     std::vector<long> ram_snapshot;
     bool i_am_halted;
-    bool default_input_set = false;
-    long default_input;
 public:
     IntcodeComputer() {reset();};
     std::vector<long> ram;
     void load_program(const char* file_name);
-    bool step(bool trace, std::function<long(void)> input_required);
+    bool step(bool trace, std::function<long(int)> input_required, int param);
     void set_input(std::vector<long> input);
     void add_to_input(long value) { input_buf.push_back(value);}
-    void set_default_input(long input) {
-        default_input = input;
-        default_input_set = true;
-    }
     long get_last_output() {
         if (output_buf.empty()) {
             return 0;

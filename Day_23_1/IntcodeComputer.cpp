@@ -34,7 +34,7 @@ void IntcodeComputer::load_program(const char *file_name) {
     i_am_halted = false;
 }
 
-bool IntcodeComputer::step(bool trace, std::function<long(void)> const input_required) {
+bool IntcodeComputer::step(bool trace, std::function<long(int)> const input_required, int param) {
 
     if (trace) {
         std::cout << std::setfill('0') << std::setw(4) << ip << "\t";
@@ -79,10 +79,7 @@ bool IntcodeComputer::step(bool trace, std::function<long(void)> const input_req
             }
             else {
                 if (input_required) {
-                    result = input_required();
-                }
-                else if (default_input_set) {
-                    result = default_input;
+                    result = input_required(param);
                 }
                 else {
                     std::cout << "OMG, I do not know what to do!" << std::endl;
