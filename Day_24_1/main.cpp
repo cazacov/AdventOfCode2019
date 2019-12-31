@@ -3,6 +3,12 @@
 #include <unordered_set>
 using namespace std;
 
+struct GridCell {
+    int level;
+    int x;
+    int y;
+};
+
 long calculate_rating(vector<vector<int>> &map);
 vector<vector<int>> next_gen(vector<vector<int>> &map);
 
