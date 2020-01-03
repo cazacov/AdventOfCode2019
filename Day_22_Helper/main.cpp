@@ -26,5 +26,8 @@ int main() {
     if (!found) {
         std::cout << n2 << " is a prime number" << std::endl;
     }
+
+    std::cout << "-1 mod 10 = " << ((-1 + 10)% 10) << std::endl;
+
     return 0;
 }

@@ -5,33 +5,29 @@
 #include <iomanip>
 #include <algorithm>
 
-enum Command {
-    NewStack,
-    Cut,
-    Increment
-};
-
 struct Technique {
-    Command command;
-    int parameter;
+    int factor;
+    int bias;
 };
 
 using namespace std;
 vector<Technique> read_input(string file_name);
 
-void apply_new_stack(vector<int> &stack);
+long apply_technique(const long p, long n, Technique tech) {
+    long result = (n*tech.factor + tech.bias) % p;
 
-void apply_increment(vector<int> &stack, int parameter);
-
-void apply_cut(vector<int> &stack, int parameter);
-
+    if (result < 0) {
+        result += p;
+    }
+    return result;
+}
 
 
 
 int main() {
     auto techniques = read_input("input.txt");
 
-    const int STACK_SIZE = 10007;
+    const int STACK_SIZE = 10;
 
     vector<int> stack(STACK_SIZE);
 
@@ -39,6 +35,21 @@ int main() {
     for (int i = 0; i < STACK_SIZE; i++) {
         stack[i] = i;
     }
+
+    Technique new_stack {-1, -1 };   // new stack
+    Technique cut_pos {1, 3 };   // cut 3
+    Technique cut_neg {1, -4 };   // cut -4
+    Technique increment {3, 0 };   // deal with increment 3
+
+
+    for (int i = 0; i < STACK_SIZE; i++) {
+        cout << apply_technique(STACK_SIZE, i, increment) << " ";
+    }
+    cout << endl;
+/*
+
+
+
 
     for (const auto &technique : techniques) {
         switch (technique.command) {
@@ -72,32 +83,8 @@ int main() {
             std::cout << "Card 2019 in position " << i << std::endl;
         }
     }
+*/
     return 0;
-}
-
-void apply_cut(vector<int> &stack, int parameter) {
-    size_t cut_point = parameter;
-    if (parameter < 0) {
-        cut_point = stack.size() + parameter;
-    }
-
-    vector<int> temp(stack.begin(), stack.begin()+cut_point);
-    stack.erase(stack.begin(), stack.begin()+cut_point);
-    stack.insert(stack.end(), temp.begin(), temp.end());
-}
-
-void apply_increment(vector<int> &stack, int parameter) {
-
-    int modulo = stack.size();
-
-    vector<int> temp(stack.begin(), stack.end());
-    for (int i = 0; i < temp.size(); i++) {
-        stack[(i*parameter) % modulo] = temp[i];
-    }
-}
-
-void apply_new_stack(vector<int> &stack) {
-    reverse(stack.begin(), stack.end());
 }
 
 vector<Technique> read_input(string file_name) {
@@ -109,14 +96,14 @@ vector<Technique> read_input(string file_name) {
         Technique technique;
 
         if (line.rfind("deal with increment", 0) == 0) {
-            technique.command = Command::Increment;
-            technique.parameter = stoi(line.substr(strlen("deal with increment"), 1000));
+            technique.factor = stoi(line.substr(strlen("deal with increment"), 1000));
+            technique.bias = 0;
         } else if (line.rfind("cut", 0) == 0) {
-            technique.command = Command::Cut;
-            technique.parameter = stoi(line.substr(strlen("cut"), 1000));
+            technique.factor = stoi(line.substr(strlen("cut"), 1000));
+            technique.bias = stoi(line.substr(strlen("cut"), 1000));
         } else if (line.rfind("deal into new stack", 0) == 0) {
-            technique.command = Command::NewStack;
-            technique.parameter = 0;
+            technique.factor = -1;
+            technique.bias = 0;
         } else {
             cout << "Unknown input! " << line << endl;
         }
