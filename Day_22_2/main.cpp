@@ -13,6 +13,30 @@ struct Technique {
 using namespace std;
 vector<Technique> read_input(string file_name);
 
+long modular_inverse(long p, long a) {
+    // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
+
+    long t = 0;
+    long r = p;
+    long new_t = 1;
+    long new_r = a;
+
+    while (new_r != 0) {
+        long quotient = r / new_r;
+        long temp = t;
+        t = new_t;
+        new_t = temp - quotient * new_t;
+        temp = r;
+        r = new_r;
+        new_r = temp - quotient * new_r;
+    }
+    if (t < 0) {
+        t += p;
+    }
+    return t;
+}
+
+
 long apply_technique(const long p, long n, Technique tech) {
     long result = (n*tech.factor + tech.bias) % p;
 
@@ -39,7 +63,7 @@ int main() {
     Technique new_stack {-1, -1 };   // new stack
     Technique cut_pos {1, 3 };   // cut 3
     Technique cut_neg {1, -4 };   // cut -4
-    Technique increment {3, 0 };   // deal with increment 3
+    Technique increment {(int)modular_inverse(STACK_SIZE, 3L), 0 };   // deal with increment 3
 
 
     for (int i = 0; i < STACK_SIZE; i++) {
