@@ -6,12 +6,14 @@
 #include <algorithm>
 
 struct Technique {
-    int factor;
-    int bias;
+    long factor;
+    long bias;
 };
 
 using namespace std;
 vector<Technique> read_input(string file_name);
+
+const int STACK_SIZE = 10007 ;
 
 long modular_inverse(long p, long a) {
     // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
@@ -46,12 +48,29 @@ long apply_technique(const long p, long n, Technique tech) {
     return result;
 }
 
+Technique inverse_technique(Technique t) {
+
+    long inv_a = 1;
+    if (t.factor != 1) {
+        inv_a = modular_inverse(STACK_SIZE, t.factor);
+    }
+
+    long bias = (-t.bias * inv_a) % STACK_SIZE;
+    if (bias < 0) {
+        bias += STACK_SIZE;
+    }
+
+    return Technique { inv_a, bias};
+}
+
+
+
 
 
 int main() {
     auto techniques = read_input("input.txt");
 
-    const int STACK_SIZE = 10;
+
 
     vector<int> stack(STACK_SIZE);
 
@@ -60,6 +79,7 @@ int main() {
         stack[i] = i;
     }
 
+    /*
     Technique new_stack {-1, -1 };   // new stack
     Technique cut_pos {1, 3 };   // cut 3
     Technique cut_neg {1, -4 };   // cut -4
@@ -70,44 +90,17 @@ int main() {
         cout << apply_technique(STACK_SIZE, i, increment) << " ";
     }
     cout << endl;
-/*
+*/
 
-
+    int pos = 2019;
 
 
     for (const auto &technique : techniques) {
-        switch (technique.command) {
-            case Command::NewStack:
-                apply_new_stack(stack);
-                break;
-            case Command::Increment:
-                apply_increment(stack, technique.parameter);
-                break;
-            case Command::Cut:
-                apply_cut(stack, technique.parameter);
-                break;
-        }
+        pos = apply_technique(STACK_SIZE, pos, technique);
     }
 
-    // Show result
-    for (int i = 0; i <= STACK_SIZE / 20; i++) {
-        cout << setw(5) << i * 20 << "\t";
-        for (int j = 0; j < 20; j++) {
-            int pos = i * 20 + j;
-            if (pos > stack.size() - 1) {
-                break;
-            }
-            cout << " " << stack[pos];
-        }
-        cout << endl;
-    }
+    std::cout << "Card 2019 in position " << pos << std::endl;
 
-    for (int i = 0; i < stack.size(); i++) {
-        if (stack[i] == 2019) {
-            std::cout << "Card 2019 in position " << i << std::endl;
-        }
-    }
-*/
     return 0;
 }
 
@@ -120,14 +113,15 @@ vector<Technique> read_input(string file_name) {
         Technique technique;
 
         if (line.rfind("deal with increment", 0) == 0) {
-            technique.factor = stoi(line.substr(strlen("deal with increment"), 1000));
+            int inc = stoi(line.substr(strlen("deal with increment"), 1000));
+            technique.factor = inc;
             technique.bias = 0;
         } else if (line.rfind("cut", 0) == 0) {
-            technique.factor = stoi(line.substr(strlen("cut"), 1000));
-            technique.bias = stoi(line.substr(strlen("cut"), 1000));
+            technique.factor = 1;
+            technique.bias = -stoi(line.substr(strlen("cut"), 1000));
         } else if (line.rfind("deal into new stack", 0) == 0) {
             technique.factor = -1;
-            technique.bias = 0;
+            technique.bias = -1;
         } else {
             cout << "Unknown input! " << line << endl;
         }
