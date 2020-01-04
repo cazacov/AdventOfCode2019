@@ -4,10 +4,14 @@
 #include <cstring>
 #include <iomanip>
 #include <algorithm>
+#include "ttmath/ttmath.h"
+
 
 struct Technique {
-    long factor;
-    long bias;
+    ttmath::Int<10> factor;
+    ttmath::Int<10> bias;
+
+    static Technique Id() { return Technique {1,0};}
 };
 
 using namespace std;
@@ -15,17 +19,17 @@ vector<Technique> read_input(string file_name);
 
 const int STACK_SIZE = 10007 ;
 
-long modular_inverse(long p, long a) {
+ttmath::Int<10> modular_inverse(ttmath::Int<10> p, ttmath::Int<10> a) {
     // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm
 
-    long t = 0;
-    long r = p;
-    long new_t = 1;
-    long new_r = a;
+    ttmath::Int<10> t = 0;
+    ttmath::Int<10> r = p;
+    ttmath::Int<10> new_t = 1;
+    ttmath::Int<10> new_r = a;
 
     while (new_r != 0) {
-        long quotient = r / new_r;
-        long temp = t;
+        auto quotient = r / new_r;
+        auto temp = t;
         t = new_t;
         new_t = temp - quotient * new_t;
         temp = r;
@@ -38,9 +42,22 @@ long modular_inverse(long p, long a) {
     return t;
 }
 
+Technique combine(Technique first, Technique second, const ttmath::Int<10> p) {
+    auto new_factor = (first.factor * second.factor) % p;
+    auto new_bias = (first.bias * second.factor + second.bias) % p;
 
-long apply_technique(const long p, long n, Technique tech) {
-    long result = (n*tech.factor + tech.bias) % p;
+    if (new_factor < 0)  {
+        new_factor += p;
+    }
+    if (new_bias < 0) {
+        new_bias += p;
+    }
+    return Technique {new_factor, new_bias};
+}
+
+
+ttmath::Int<10> apply_technique(Technique tech, ttmath::Int<10> n, const ttmath::Int<10> p) {
+    auto result = (n*tech.factor + tech.bias) % p;
 
     if (result < 0) {
         result += p;
@@ -48,57 +65,33 @@ long apply_technique(const long p, long n, Technique tech) {
     return result;
 }
 
-Technique inverse_technique(Technique t) {
+Technique inverse_technique(Technique t, const ttmath::Int<10> p) {
 
-    long inv_a = 1;
+    ttmath::Int<10> inv_a = 1;
     if (t.factor != 1) {
         inv_a = modular_inverse(STACK_SIZE, t.factor);
     }
 
-    long bias = (-t.bias * inv_a) % STACK_SIZE;
+    ttmath::Int<10> bias = (-t.bias * inv_a) % p;
     if (bias < 0) {
-        bias += STACK_SIZE;
+        bias += p;
     }
 
     return Technique { inv_a, bias};
 }
 
-
-
-
-
 int main() {
     auto techniques = read_input("input.txt");
 
-
-
-    vector<int> stack(STACK_SIZE);
-
-    // Cards come in factory order
-    for (int i = 0; i < STACK_SIZE; i++) {
-        stack[i] = i;
-    }
-
-    /*
-    Technique new_stack {-1, -1 };   // new stack
-    Technique cut_pos {1, 3 };   // cut 3
-    Technique cut_neg {1, -4 };   // cut -4
-    Technique increment {(int)modular_inverse(STACK_SIZE, 3L), 0 };   // deal with increment 3
-
-
-    for (int i = 0; i < STACK_SIZE; i++) {
-        cout << apply_technique(STACK_SIZE, i, increment) << " ";
-    }
-    cout << endl;
-*/
-
-    int pos = 2019;
-
-
+    Technique combined = Technique::Id();
     for (const auto &technique : techniques) {
-        pos = apply_technique(STACK_SIZE, pos, technique);
+        combined = combine(combined, technique, STACK_SIZE);
     }
 
+    auto factor = combined.factor.ToString();
+    auto bias = combined.bias.ToString();
+
+    ttmath::Int<10> pos = apply_technique(combined, 2019, STACK_SIZE);
     std::cout << "Card 2019 in position " << pos << std::endl;
 
     return 0;
