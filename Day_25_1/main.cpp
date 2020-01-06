@@ -1,6 +1,12 @@
 #include <iostream>
+#include "AsciiComputer.h"
+
+using namespace std;
 
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+
+    AsciiComputer computer;
+
+    cout << computer.run() << endl;
     return 0;
 }
