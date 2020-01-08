@@ -9,11 +9,11 @@
 
 void IntcodeComputer::load_program(const char *file_name) {
 
-    std::vector<long> result;
+    std::vector<int64_t> result;
     ram.resize(RAM_SIZE, 0);
     ip = 0;
     input_pos = 0;
-
+    
     std::ifstream  data(file_name);
     std::string line;
     int mem_pos = 0;
@@ -34,7 +34,7 @@ void IntcodeComputer::load_program(const char *file_name) {
     i_am_halted = false;
 }
 
-bool IntcodeComputer::step(bool trace, std::function<long(int)> const input_required, int param) {
+bool IntcodeComputer::step(bool trace, std::function<int64_t(int)> const input_required, int param) {
 
     if (trace) {
         std::cout << std::setfill('0') << std::setw(4) << ip << "\t";
@@ -42,7 +42,7 @@ bool IntcodeComputer::step(bool trace, std::function<long(int)> const input_requ
 
     Command next_command = load_next_command();
 
-    long result = 0;
+    int64_t result = 0;
     std::string cmd;
     if (trace) {
         for (int i = 0; i < next_command.param_count; i++) {
@@ -156,7 +156,7 @@ bool IntcodeComputer::step(bool trace, std::function<long(int)> const input_requ
     return ret_code;
 }
 
-void IntcodeComputer::set_input(std::vector<long> input) {
+void IntcodeComputer::set_input(std::vector<int64_t> input) {
 
     input_buf.insert(input_buf.end(), input.begin(), input.end());
 //    input_pos = 0;
@@ -228,7 +228,7 @@ Command IntcodeComputer::load_next_command() {
     }
 
     for (int i = 0; i < result.param_count; i++) {
-        long &ram_value = ram[ip + 1 + i];
+        int64_t &ram_value = ram[ip + 1 + i];
         if (result.mode[i] == Mode::Position) {
             result.parameter_values[i] = ram[ram_value];
         } else if (result.mode[i] == Mode::Relative) {

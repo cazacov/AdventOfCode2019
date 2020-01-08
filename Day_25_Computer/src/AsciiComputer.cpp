@@ -14,7 +14,7 @@ std::string AsciiComputer::run(std::string input) {
     out_buf = "";
 
     if (!input.empty()) {
-        std::vector<long> data(input.begin(), input.end());
+        std::vector<int64_t> data(input.begin(), input.end());
         computer.set_input(data);
         computer.add_to_input(10);  // CR
     }
@@ -30,4 +30,5 @@ std::string AsciiComputer::run(std::string input) {
             }
         }
     }
+    return "Computer halted";
 }

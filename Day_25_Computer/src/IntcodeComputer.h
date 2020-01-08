@@ -19,22 +19,22 @@ enum ExecutionResult {
 
 class IntcodeComputer {
 private:
-    std::vector<long> input_buf;
+    std::vector<int64_t> input_buf;
     int input_pos = 0;
-    std::vector<long> output_buf;
+    std::vector<int64_t> output_buf;
     Command load_next_command();
     int ip;
     int base;
-    std::vector<long> ram_snapshot;
+    std::vector<int64_t> ram_snapshot;
     bool i_am_halted;
 public:
     IntcodeComputer() {reset();};
-    std::vector<long> ram;
+    std::vector<int64_t> ram;
     void load_program(const char* file_name);
-    bool step(bool trace, std::function<long(int)> input_required, int param);
-    void set_input(std::vector<long> input);
-    void add_to_input(long value) { input_buf.push_back(value);}
-    long get_last_output() {
+    bool step(bool trace, std::function<int64_t(int)> input_required, int param);
+    void set_input(std::vector<int64_t> input);
+    void add_to_input(int64_t value) { input_buf.push_back(value);}
+    int64_t get_last_output() {
         if (output_buf.empty()) {
             return 0;
         }
