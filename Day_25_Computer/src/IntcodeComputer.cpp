@@ -27,7 +27,7 @@ void IntcodeComputer::load_program(const char *file_name) {
         std::string opcode ;
         while(std::getline(lineStream, opcode ,','))
         {
-            ram[mem_pos++]= stol(opcode);
+            ram[mem_pos++]= strtoll(opcode.c_str(), NULL, 10);
         }
     }
     ram_snapshot = ram;

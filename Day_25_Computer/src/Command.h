@@ -1,6 +1,8 @@
 #ifndef DAY_09_1_COMMAND_H
 #define DAY_09_1_COMMAND_H
 
+#include <cstdint>
+
 #define OPCODE_ADD 1
 #define OPCODE_MUL 2
 #define OPCODE_IN 3
@@ -20,7 +22,7 @@ enum Mode {
 
 struct Command {
     int opcode;
-    long parameter_values[2] = {0};
+    int64_t parameter_values[2] = {0};
     Mode mode[3] = {Mode::Position};
     int result_addr = {0};
     ResultDestination destination;
